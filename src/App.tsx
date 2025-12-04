@@ -35,7 +35,20 @@ import type {
   ExportSettings,
   SeparationPreview,
   MachinePreset,
+  LabelOrientation,
+  BarcodeObject,
+  TextObject,
+  ImageObject,
+  LabelObject,
 } from './types/barcodeTypes'
+
+/** BASE URL na BE – primárne z Vite env, fallback na Railway / api.gpcs.online */
+const RAW_API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'https://api.gpcs.online'
+
+// odstráň trailing /, aby URL boli vždy v tvare https://.../api/...
+const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, '')
 
 const App: React.FC = () => {
   // Auth state
@@ -154,7 +167,7 @@ const App: React.FC = () => {
   }
 
   /* =====================
-   * BACKEND VALIDÁCIA (lokálny stub)
+   * BACKEND VALIDÁCIA
    * ===================== */
   const [serverMessage, setServerMessage] = useState('')
   const [serverError, setServerError] = useState('')
@@ -164,15 +177,77 @@ const App: React.FC = () => {
     setLoading(true)
     setServerMessage('')
     setServerError('')
+
     try {
       if (!codeValue) {
         throw new Error('Hodnota kódu je prázdna.')
       }
-      // zatiaľ len lokálny stub – backend validáciu sme pripravili
-      setServerMessage('Lokálna validácia prebehla – formát vyzerá v poriadku.')
+
+      const resp = await fetch(`${API_BASE_URL}/api/gs1/validate-linear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          codeType,
+          value: codeValue,
+        }),
+      })
+
+      // Ak backend endpoint ešte nie je hotový / 404 → fallback na lokálny stub
+      if (resp.status === 404) {
+        setServerMessage(
+          'Backend validácia ešte nie je dostupná – lokálna kontrola OK (formát vyzerá v poriadku).',
+        )
+        return
+      }
+
+      if (!resp.ok) {
+        const text = await resp.text()
+        throw new Error(
+          `Chyba BE validácie (${resp.status}): ${text || 'neznáma chyba'}`,
+        )
+      }
+
+      type Gs1Response = {
+        valid: boolean
+        message?: string
+        warnings?: string[]
+        sanitized?: string
+        finalCode?: string
+        checkDigit?: number
+      }
+
+      const data: Gs1Response = await resp.json()
+
+      if (typeof data.valid === 'boolean') {
+        const warningsText =
+          data.warnings && data.warnings.length > 0
+            ? `\nUpozornenia: ${data.warnings.join('; ')}`
+            : ''
+
+        if (data.valid) {
+          const baseMsg = data.message ?? 'GS1 validácia úspešná.'
+          setServerMessage(baseMsg + warningsText)
+          setServerError('')
+        } else {
+          const baseMsg = data.message ?? 'GS1 kód nie je validný.'
+          setServerError(baseMsg + warningsText)
+          setServerMessage('')
+        }
+      } else {
+        // backend vrátil niečo iné, ale bez chyby
+        setServerMessage(
+          data?.message ??
+            'Backend odpovedal, ale formát odpovede nie je špecifikovaný. Predpokladám OK.',
+        )
+      }
     } catch (e) {
+      console.error(e)
       setServerError(
-        e instanceof Error ? e.message : 'Neznáma chyba pri validácii.',
+        e instanceof Error
+          ? e.message
+          : 'Neznáma chyba pri volaní backend validácie.',
       )
     } finally {
       setLoading(false)
@@ -223,6 +298,7 @@ const App: React.FC = () => {
     currentRowIndex: 0,
     totalRows: 0,
     patternTemplate: '[SERIAL]',
+    fieldMapping: {},
   })
   const [vdpImportPatternTemplate, setVdpImportPatternTemplate] = useState(
     '(01)[SERIAL]',
@@ -311,12 +387,13 @@ const App: React.FC = () => {
   const [showRulers, setShowRulers] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [snapToObjects, setSnapToObjects] = useState(true)
-  const [distortionSettings, setDistortionSettings] = useState<DistortionSettings>({
-    enabled: false,
-    webDirectionPercent: 0,
-    crossDirectionPercent: 0,
-    previewDistorted: false,
-  })
+  const [distortionSettings, setDistortionSettings] =
+    useState<DistortionSettings>({
+      enabled: false,
+      webDirectionPercent: 0,
+      crossDirectionPercent: 0,
+      previewDistorted: false,
+    })
 
   // Canvas zobrazenie zón
   const [showBleedZone, setShowBleedZone] = useState(true)
@@ -325,7 +402,8 @@ const App: React.FC = () => {
   const [showCanvasGrid, setShowCanvasGrid] = useState(true)
   const [canvasGridSizeMm, setCanvasGridSizeMm] = useState(1)
   const [canvasZoom, setCanvasZoom] = useState(1)
-  const [labelOrientation, setLabelOrientation] = useState<import('./types/barcodeTypes').LabelOrientation>('HEAD_UP')
+  const [labelOrientation, setLabelOrientation] =
+    useState<LabelOrientation>('HEAD_UP')
 
   // Zbaliteľné grafické nástroje
   const [showGraphicTools, setShowGraphicTools] = useState(false)
@@ -382,24 +460,61 @@ const App: React.FC = () => {
 
   // Machine Presets
   const [showMachinePresets, setShowMachinePresets] = useState(false)
-  const [selectedMachinePreset, setSelectedMachinePreset] = useState<MachinePreset | null>(null)
+  const [selectedMachinePreset, setSelectedMachinePreset] =
+    useState<MachinePreset | null>(null)
 
   // Job Ticket
   const [showJobTicket, setShowJobTicket] = useState(false)
   const jobId = `JOB-${Date.now().toString(36).toUpperCase()}`
 
-  // Presety etikiet
+  // Presety etikiet (light verzia, stačí na UI výber)
   const LABEL_PRESETS_CONFIG = [
     { id: '50x30', name: '50×30 mm', w: 50, h: 30, category: 'standard' },
     { id: '80x50', name: '80×50 mm', w: 80, h: 50, category: 'standard' },
     { id: '100x70', name: '100×70 mm', w: 100, h: 70, category: 'standard' },
     { id: '100x100', name: '100×100 mm', w: 100, h: 100, category: 'standard' },
-    { id: 'PHARMA_VIAL_25x10', name: 'Pharma Vial 25×10', w: 25, h: 10, category: 'pharma' },
-    { id: 'PHARMA_BOTTLE_50x30', name: 'Pharma Bottle 50×30', w: 50, h: 30, category: 'pharma' },
-    { id: 'PHARMA_BOX_70x40', name: 'Pharma Box 70×40', w: 70, h: 40, category: 'pharma' },
-    { id: 'GS1_A6_105x148', name: 'GS1 A6 (105×148)', w: 105, h: 148, category: 'logistics' },
-    { id: 'PALLET_105x148', name: 'Pallet Label', w: 105, h: 148, category: 'logistics' },
-    { id: 'CUSTOM', name: 'Vlastný rozmer', w: labelWidthMm, h: labelHeightMm, category: 'custom' },
+    {
+      id: 'PHARMA_VIAL_25x10',
+      name: 'Pharma Vial 25×10',
+      w: 25,
+      h: 10,
+      category: 'pharma',
+    },
+    {
+      id: 'PHARMA_BOTTLE_50x30',
+      name: 'Pharma Bottle 50×30',
+      w: 50,
+      h: 30,
+      category: 'pharma',
+    },
+    {
+      id: 'PHARMA_BOX_70x40',
+      name: 'Pharma Box 70×40',
+      w: 70,
+      h: 40,
+      category: 'pharma',
+    },
+    {
+      id: 'GS1_A6_105x148',
+      name: 'GS1 A6 (105×148)',
+      w: 105,
+      h: 148,
+      category: 'logistics',
+    },
+    {
+      id: 'PALLET_105x148',
+      name: 'Pallet Label',
+      w: 105,
+      h: 148,
+      category: 'logistics',
+    },
+    {
+      id: 'CUSTOM',
+      name: 'Vlastný rozmer',
+      w: labelWidthMm,
+      h: labelHeightMm,
+      category: 'custom',
+    },
   ] as const
 
   const handlePresetChange = (presetId: string) => {
@@ -408,12 +523,12 @@ const App: React.FC = () => {
       setLabelWidthMm(preset.w)
       setLabelHeightMm(preset.h)
     }
-    setLabelPreset(presetId as import('./types/barcodeTypes').LabelPreset)
+    setLabelPreset(presetId as LabelPreset)
   }
 
   // Pridávanie objektov
   const addBarcodeObject = () => {
-    const newObj: import('./types/barcodeTypes').BarcodeObject = {
+    const newObj: BarcodeObject = {
       id: `barcode_${Date.now()}`,
       type: 'barcode',
       name: 'Barcode',
@@ -443,20 +558,23 @@ const App: React.FC = () => {
       hrFontFamily: 'OCR-B',
       hrFontSizePt: hrFontSizePt,
       hrTextColor: '#000000',
+      hrCustomText,
       whiteBoxEnabled: true,
       whiteBoxPaddingMm: 1,
       whiteBoxCornerRadiusMm: 0.5,
     }
-    setLayers(prev => prev.map(layer =>
-      layer.id === 'layer_barcode'
-        ? { ...layer, objects: [...layer.objects, newObj] }
-        : layer
-    ))
+    setLayers(prev =>
+      prev.map(layer =>
+        layer.id === 'layer_barcode'
+          ? { ...layer, objects: [...layer.objects, newObj] }
+          : layer,
+      ),
+    )
     setSelectedObjectId(newObj.id)
   }
 
   const addTextObject = () => {
-    const newObj: import('./types/barcodeTypes').TextObject = {
+    const newObj: TextObject = {
       id: `text_${Date.now()}`,
       type: 'text',
       name: 'Text',
@@ -484,16 +602,18 @@ const App: React.FC = () => {
       letterSpacingPt: 0,
       textTransform: 'none',
     }
-    setLayers(prev => prev.map(layer =>
-      layer.id === 'layer_text'
-        ? { ...layer, objects: [...layer.objects, newObj] }
-        : layer
-    ))
+    setLayers(prev =>
+      prev.map(layer =>
+        layer.id === 'layer_text'
+          ? { ...layer, objects: [...layer.objects, newObj] }
+          : layer,
+      ),
+    )
     setSelectedObjectId(newObj.id)
   }
 
   const addImageObject = () => {
-    const newObj: import('./types/barcodeTypes').ImageObject = {
+    const newObj: ImageObject = {
       id: `image_${Date.now()}`,
       type: 'image',
       name: 'Logo',
@@ -515,17 +635,23 @@ const App: React.FC = () => {
       src: '',
       fit: 'contain',
     }
-    setLayers(prev => prev.map(layer =>
-      layer.id === 'layer_logo'
-        ? { ...layer, objects: [...layer.objects, newObj] }
-        : layer
-    ))
+    setLayers(prev =>
+      prev.map(layer =>
+        layer.id === 'layer_logo'
+          ? { ...layer, objects: [...layer.objects, newObj] }
+          : layer,
+      ),
+    )
     setSelectedObjectId(newObj.id)
   }
 
   // Nájsť vybraný objekt
-  const selectedObject = layers.flatMap(l => l.objects).find(o => o.id === selectedObjectId)
-  const selectedLayer = layers.find(l => l.objects.some(o => o.id === selectedObjectId))
+  const selectedObject = layers
+    .flatMap(l => l.objects)
+    .find(o => o.id === selectedObjectId)
+  const selectedLayer = layers.find(l =>
+    l.objects.some(o => o.id === selectedObjectId),
+  )
 
   const labelConfig: LabelConfig = {
     widthMm: labelWidthMm,
@@ -546,7 +672,7 @@ const App: React.FC = () => {
   const handleUpdateObject = (
     layerId: string,
     objectId: string,
-    updates: Partial<import('./types/barcodeTypes').LabelObject>,
+    updates: Partial<LabelObject>,
   ) => {
     setLayers(prev =>
       prev.map(layer =>
@@ -571,7 +697,7 @@ const App: React.FC = () => {
   /* =====================
    * RENDER
    * ===================== */
-  
+
   // Ak nie je prihlásený, zobraz login stránku
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />
@@ -668,60 +794,60 @@ const App: React.FC = () => {
             {/* Modal content */}
             <div className="p-4">
               <GraphicToolsPanel
-            codeType={codeType}
-            rotation={rotation}
-            setRotation={setRotation}
-            printDirection={printDirection}
-            setPrintDirection={setPrintDirection}
-            xDimMm={xDimMm}
-            setXDimMm={setXDimMm}
-            quietZoneMm={quietZoneMm}
-            setQuietZoneMm={setQuietZoneMm}
-            magnificationPercent={magnificationPercent}
-            setMagnificationPercent={setMagnificationPercent}
-            barWidthReductionMm={barWidthReductionMm}
-            setBarWidthReductionMm={setBarWidthReductionMm}
-            applyPrintingProfile={applyPrintingProfile}
-            vdpEnabled={vdpEnabled}
-            setVdpEnabled={setVdpEnabled}
-            serialStart={serialStart}
-            setSerialStart={setSerialStart}
-            serialCurrent={serialCurrent}
-            setSerialCurrent={setSerialCurrent}
-            serialPadding={serialPadding}
-            setSerialPadding={setSerialPadding}
-            vdpPattern={vdpPattern}
-            setVdpPattern={setVdpPattern}
-            vdpMode={vdpMode}
-            setVdpMode={setVdpMode}
-            vdpCount={vdpCount}
-            setVdpCount={setVdpCount}
-            vdpPrefix={vdpPrefix}
-            setVdpPrefix={setVdpPrefix}
-            vdpAlphaStartChar={vdpAlphaStartChar}
-            setVdpAlphaStartChar={setVdpAlphaStartChar}
-            barHeightPx={barHeightPx}
-            setBarHeightPx={setBarHeightPx}
-            showHrText={showHrText}
-            setShowHrText={setShowHrText}
-            hrFontSizePt={hrFontSizePt}
-            setHrFontSizePt={setHrFontSizePt}
-            barColor={barColor}
-            setBarColor={setBarColor}
-            bgColor={bgColor}
-            setBgColor={setBgColor}
-            textColor={textColor}
-            setTextColor={setTextColor}
-            qrLogoDataUrl={qrLogoDataUrl}
-            setQrLogoDataUrl={setQrLogoDataUrl}
-            qrLogoScale={qrLogoScale}
-            setQrLogoScale={setQrLogoScale}
-            hrCustomText={hrCustomText}
-            setHrCustomText={setHrCustomText}
-            labelBorderRadiusMm={labelBorderRadiusMm}
-            setLabelBorderRadiusMm={setLabelBorderRadiusMm}
-            showDimensionGuides={showDimensionGuides}
-            setShowDimensionGuides={setShowDimensionGuides}
+                codeType={codeType}
+                rotation={rotation}
+                setRotation={setRotation}
+                printDirection={printDirection}
+                setPrintDirection={setPrintDirection}
+                xDimMm={xDimMm}
+                setXDimMm={setXDimMm}
+                quietZoneMm={quietZoneMm}
+                setQuietZoneMm={setQuietZoneMm}
+                magnificationPercent={magnificationPercent}
+                setMagnificationPercent={setMagnificationPercent}
+                barWidthReductionMm={barWidthReductionMm}
+                setBarWidthReductionMm={setBarWidthReductionMm}
+                applyPrintingProfile={applyPrintingProfile}
+                vdpEnabled={vdpEnabled}
+                setVdpEnabled={setVdpEnabled}
+                serialStart={serialStart}
+                setSerialStart={setSerialStart}
+                serialCurrent={serialCurrent}
+                setSerialCurrent={setSerialCurrent}
+                serialPadding={serialPadding}
+                setSerialPadding={setSerialPadding}
+                vdpPattern={vdpPattern}
+                setVdpPattern={setVdpPattern}
+                vdpMode={vdpMode}
+                setVdpMode={setVdpMode}
+                vdpCount={vdpCount}
+                setVdpCount={setVdpCount}
+                vdpPrefix={vdpPrefix}
+                setVdpPrefix={setVdpPrefix}
+                vdpAlphaStartChar={vdpAlphaStartChar}
+                setVdpAlphaStartChar={setVdpAlphaStartChar}
+                barHeightPx={barHeightPx}
+                setBarHeightPx={setBarHeightPx}
+                showHrText={showHrText}
+                setShowHrText={setShowHrText}
+                hrFontSizePt={hrFontSizePt}
+                setHrFontSizePt={setHrFontSizePt}
+                barColor={barColor}
+                setBarColor={setBarColor}
+                bgColor={bgColor}
+                setBgColor={setBgColor}
+                textColor={textColor}
+                setTextColor={setTextColor}
+                qrLogoDataUrl={qrLogoDataUrl}
+                setQrLogoDataUrl={setQrLogoDataUrl}
+                qrLogoScale={qrLogoScale}
+                setQrLogoScale={setQrLogoScale}
+                hrCustomText={hrCustomText}
+                setHrCustomText={setHrCustomText}
+                labelBorderRadiusMm={labelBorderRadiusMm}
+                setLabelBorderRadiusMm={setLabelBorderRadiusMm}
+                showDimensionGuides={showDimensionGuides}
+                setShowDimensionGuides={setShowDimensionGuides}
               />
             </div>
           </div>
@@ -733,7 +859,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-[400px] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">Canvas nastavenia</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                Canvas nastavenia
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowCanvasSettings(false)}
@@ -749,7 +877,12 @@ const App: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={distortionSettings.enabled}
-                    onChange={e => setDistortionSettings(s => ({ ...s, enabled: e.target.checked }))}
+                    onChange={e =>
+                      setDistortionSettings(s => ({
+                        ...s,
+                        enabled: e.target.checked,
+                      }))
+                    }
                     className="h-4 w-4"
                   />
                   Povoliť distortion kompenzáciu (flexo)
@@ -757,22 +890,38 @@ const App: React.FC = () => {
                 {distortionSettings.enabled && (
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-[10px] text-slate-400">Web smer (%)</label>
+                      <label className="mb-1 block text-[10px] text-slate-400">
+                        Web smer (%)
+                      </label>
                       <input
                         type="number"
                         step="0.1"
                         value={distortionSettings.webDirectionPercent}
-                        onChange={e => setDistortionSettings(s => ({ ...s, webDirectionPercent: parseFloat(e.target.value) || 0 }))}
+                        onChange={e =>
+                          setDistortionSettings(s => ({
+                            ...s,
+                            webDirectionPercent:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] text-slate-400">Cross smer (%)</label>
+                      <label className="mb-1 block text-[10px] text-slate-400">
+                        Cross smer (%)
+                      </label>
                       <input
                         type="number"
                         step="0.1"
                         value={distortionSettings.crossDirectionPercent}
-                        onChange={e => setDistortionSettings(s => ({ ...s, crossDirectionPercent: parseFloat(e.target.value) || 0 }))}
+                        onChange={e =>
+                          setDistortionSettings(s => ({
+                            ...s,
+                            crossDirectionPercent:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
                       />
                     </div>
@@ -782,14 +931,18 @@ const App: React.FC = () => {
 
               {/* Grid size */}
               <div>
-                <label className="mb-1 block text-xs text-slate-400">Grid veľkosť (mm)</label>
+                <label className="mb-1 block text-xs text-slate-400">
+                  Grid veľkosť (mm)
+                </label>
                 <input
                   type="number"
                   step="0.5"
                   min="0.5"
                   max="10"
                   value={canvasGridSizeMm}
-                  onChange={e => setCanvasGridSizeMm(parseFloat(e.target.value) || 1)}
+                  onChange={e =>
+                    setCanvasGridSizeMm(parseFloat(e.target.value) || 1)
+                  }
                   className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
                 />
               </div>
@@ -811,7 +964,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-[800px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">Step & Repeat Layout</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                Step & Repeat Layout
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowStepRepeat(false)}
@@ -838,7 +993,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-[700px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">Export etikety</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                Export etikety
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowExport(false)}
@@ -850,19 +1007,41 @@ const App: React.FC = () => {
             <div className="p-4">
               <ExportPanel
                 exportSettings={exportSettings}
-                onUpdateSettings={(updates) => setExportSettings(prev => ({ ...prev, ...updates }))}
+                onUpdateSettings={updates =>
+                  setExportSettings(prev => ({ ...prev, ...updates }))
+                }
                 labelConfig={labelConfig}
                 layers={layers}
-                onExport={(settings) => {
+                onExport={settings => {
                   console.log('Export with settings:', settings)
                   setShowExport(false)
                 }}
                 onGenerateSeparationPreview={() => {
                   const previews: SeparationPreview[] = [
-                    { colorName: 'Cyan', isSpot: false, previewDataUrl: '', coverage: 15 },
-                    { colorName: 'Magenta', isSpot: false, previewDataUrl: '', coverage: 8 },
-                    { colorName: 'Yellow', isSpot: false, previewDataUrl: '', coverage: 5 },
-                    { colorName: 'Black', isSpot: false, previewDataUrl: '', coverage: 45 },
+                    {
+                      colorName: 'Cyan',
+                      isSpot: false,
+                      previewDataUrl: '',
+                      coverage: 15,
+                    },
+                    {
+                      colorName: 'Magenta',
+                      isSpot: false,
+                      previewDataUrl: '',
+                      coverage: 8,
+                    },
+                    {
+                      colorName: 'Yellow',
+                      isSpot: false,
+                      previewDataUrl: '',
+                      coverage: 5,
+                    },
+                    {
+                      colorName: 'Black',
+                      isSpot: false,
+                      previewDataUrl: '',
+                      coverage: 45,
+                    },
                   ]
                   return previews
                 }}
@@ -877,7 +1056,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-[500px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">Strojové nastavenia</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                Strojové nastavenia
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowMachinePresets(false)}
@@ -904,7 +1085,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-[600px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">Job Ticket / Report</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                Job Ticket / Report
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowJobTicket(false)}
@@ -981,23 +1164,48 @@ const App: React.FC = () => {
             {/* Zóny */}
             <div className="flex items-center gap-1 text-[10px]">
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={showBleedZone} onChange={e => setShowBleedZone(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={showBleedZone}
+                  onChange={e => setShowBleedZone(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Bleed
               </label>
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={showTrimZone} onChange={e => setShowTrimZone(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={showTrimZone}
+                  onChange={e => setShowTrimZone(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Trim
               </label>
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={showSafeZone} onChange={e => setShowSafeZone(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={showSafeZone}
+                  onChange={e => setShowSafeZone(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Safe
               </label>
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={showCanvasGrid} onChange={e => setShowCanvasGrid(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={showCanvasGrid}
+                  onChange={e => setShowCanvasGrid(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Grid
               </label>
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={showRulers} onChange={e => setShowRulers(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={showRulers}
+                  onChange={e => setShowRulers(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Rulers
               </label>
             </div>
@@ -1009,7 +1217,9 @@ const App: React.FC = () => {
               <span className="text-slate-500">Orientácia:</span>
               <select
                 value={labelOrientation}
-                onChange={e => setLabelOrientation(e.target.value as import('./types/barcodeTypes').LabelOrientation)}
+                onChange={e =>
+                  setLabelOrientation(e.target.value as LabelOrientation)
+                }
                 className="rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-[10px] text-slate-200"
               >
                 <option value="HEAD_UP">Head Up ↑</option>
@@ -1024,9 +1234,23 @@ const App: React.FC = () => {
             {/* Zoom */}
             <div className="flex items-center gap-1 text-[10px]">
               <span className="text-slate-500">Zoom:</span>
-              <button onClick={() => setCanvasZoom(z => Math.max(0.25, z - 0.25))} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700">−</button>
-              <span className="w-10 text-center text-slate-200">{Math.round(canvasZoom * 100)}%</span>
-              <button onClick={() => setCanvasZoom(z => Math.min(3, z + 0.25))} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700">+</button>
+              <button
+                onClick={() =>
+                  setCanvasZoom(z => Math.max(0.25, z - 0.25))
+                }
+                className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700"
+              >
+                −
+              </button>
+              <span className="w-10 text-center text-slate-200">
+                {Math.round(canvasZoom * 100)}%
+              </span>
+              <button
+                onClick={() => setCanvasZoom(z => Math.min(3, z + 0.25))}
+                className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700"
+              >
+                +
+              </button>
             </div>
 
             <div className="h-4 w-px bg-slate-700" />
@@ -1034,11 +1258,21 @@ const App: React.FC = () => {
             {/* Snapping */}
             <div className="flex items-center gap-1 text-[10px]">
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={snapToGrid} onChange={e => setSnapToGrid(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={snapToGrid}
+                  onChange={e => setSnapToGrid(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Snap Grid
               </label>
               <label className="flex items-center gap-1 text-slate-400">
-                <input type="checkbox" checked={snapToObjects} onChange={e => setSnapToObjects(e.target.checked)} className="h-3 w-3" />
+                <input
+                  type="checkbox"
+                  checked={snapToObjects}
+                  onChange={e => setSnapToObjects(e.target.checked)}
+                  className="h-3 w-3"
+                />
                 Snap Obj
               </label>
             </div>
@@ -1049,9 +1283,16 @@ const App: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowCanvasSettings(true)}
-              className={`rounded border px-2 py-1 text-[10px] ${distortionSettings.enabled ? 'border-amber-500 bg-amber-500/20 text-amber-300' : 'border-slate-600 bg-slate-800 text-slate-300'}`}
+              className={`rounded border px-2 py-1 text-[10px] ${
+                distortionSettings.enabled
+                  ? 'border-amber-500 bg-amber-500/20 text-amber-300'
+                  : 'border-slate-600 bg-slate-800 text-slate-300'
+              }`}
             >
-              Distortion {distortionSettings.enabled ? `${distortionSettings.webDirectionPercent}%` : 'OFF'}
+              Distortion{' '}
+              {distortionSettings.enabled
+                ? `${distortionSettings.webDirectionPercent}%`
+                : 'OFF'}
             </button>
           </div>
 
@@ -1066,18 +1307,30 @@ const App: React.FC = () => {
                 className="rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-[10px] text-slate-200"
               >
                 <optgroup label="Štandardné">
-                  {LABEL_PRESETS_CONFIG.filter(p => p.category === 'standard').map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {LABEL_PRESETS_CONFIG.filter(
+                    p => p.category === 'standard',
+                  ).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
                   ))}
                 </optgroup>
                 <optgroup label="Farmaceutické">
-                  {LABEL_PRESETS_CONFIG.filter(p => p.category === 'pharma').map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {LABEL_PRESETS_CONFIG.filter(
+                    p => p.category === 'pharma',
+                  ).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
                   ))}
                 </optgroup>
                 <optgroup label="Logistické">
-                  {LABEL_PRESETS_CONFIG.filter(p => p.category === 'logistics').map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {LABEL_PRESETS_CONFIG.filter(
+                    p => p.category === 'logistics',
+                  ).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
                   ))}
                 </optgroup>
                 <optgroup label="Vlastné">
@@ -1089,14 +1342,18 @@ const App: React.FC = () => {
                   <input
                     type="number"
                     value={labelWidthMm}
-                    onChange={e => setLabelWidthMm(parseFloat(e.target.value) || 50)}
+                    onChange={e =>
+                      setLabelWidthMm(parseFloat(e.target.value) || 50)
+                    }
                     className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
                   />
                   <span className="text-slate-500">×</span>
                   <input
                     type="number"
                     value={labelHeightMm}
-                    onChange={e => setLabelHeightMm(parseFloat(e.target.value) || 30)}
+                    onChange={e =>
+                      setLabelHeightMm(parseFloat(e.target.value) || 30)
+                    }
                     className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
                   />
                   <span className="text-slate-500">mm</span>
@@ -1138,13 +1395,19 @@ const App: React.FC = () => {
             {selectedObject && selectedLayer && (
               <div className="flex items-center gap-2 text-[10px]">
                 <span className="text-slate-400">Vybrané:</span>
-                <span className="font-medium text-sky-300">{selectedObject.name}</span>
+                <span className="font-medium text-sky-300">
+                  {selectedObject.name}
+                </span>
                 <span className="text-slate-500">X:</span>
                 <input
                   type="number"
                   step="0.5"
                   value={selectedObject.xMm}
-                  onChange={e => handleUpdateObject(selectedLayer.id, selectedObject.id, { xMm: parseFloat(e.target.value) || 0 })}
+                  onChange={e =>
+                    handleUpdateObject(selectedLayer.id, selectedObject.id, {
+                      xMm: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
                 />
                 <span className="text-slate-500">Y:</span>
@@ -1152,7 +1415,11 @@ const App: React.FC = () => {
                   type="number"
                   step="0.5"
                   value={selectedObject.yMm}
-                  onChange={e => handleUpdateObject(selectedLayer.id, selectedObject.id, { yMm: parseFloat(e.target.value) || 0 })}
+                  onChange={e =>
+                    handleUpdateObject(selectedLayer.id, selectedObject.id, {
+                      yMm: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
                 />
                 <span className="text-slate-500">mm</span>
@@ -1227,6 +1494,7 @@ const App: React.FC = () => {
 }
 
 export default App
+
 
 
 
