@@ -1,0 +1,9 @@
+/* Špecifické štýly pre koreňovú aplikáciu.
+   Vizuálny layout riešime cez Tailwind triedy v App.tsx, takže tu len drobné doplnky. */
+
+#root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+

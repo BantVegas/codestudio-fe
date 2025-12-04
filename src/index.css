@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* >>> TOTO DOPLŇ <<< */
+body {
+  background-color: #020617; /* alebo tvoja hlavná dark farba */
+  color: #e5e7eb;
+}
+
+/* pre istotu aj root, ak App nemá vlastný bg */
+#root {
+  background-color: #020617;
+}
+
+/* Scrollbar štýly pre tmavú tému */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
