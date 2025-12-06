@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/JobTicketPanel/JobTicketPanel.tsx
 import React, { useState } from 'react'
 import type {

@@ -495,6 +495,7 @@ export interface TrapSettings {
   // Direction
   directionMode: DirectionMode
   imageTrapDirection: ImageTrapDirection
+  trapDirectionMethod: 'LUMINANCE' | 'NEUTRAL_DENSITY' | 'CHROMA' | 'CUSTOM'
   
   // === 3. COLOR & SHAPE ===
   trapColorIntensity: number      // 0-100% (default 100%)
@@ -575,6 +576,7 @@ export const DEFAULT_TRAP_SETTINGS: TrapSettings = {
   minInkDifference: 10,
   directionMode: 'USE_LIGHTNESS',
   imageTrapDirection: 'AUTOMATIC',
+  trapDirectionMethod: 'LUMINANCE',
   
   // 3. COLOR & SHAPE
   trapColorIntensity: 100,

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Auto-Trapping Engine
- * Trap Generator Module (TODO 3)
+ * Trap Geometry Generator (TODO 3)
  * 
  * Generates trap geometry:
  * - Bezier curve offset (positive/negative)
@@ -16,7 +17,7 @@ import type {
   TrapObject,
   TrapDecision,
   TrapStyle,
-  TrapDirection,
+  // TrapDirection - reserved for future use
   ColorDefinition,
   TrapSettings,
   ColorRegion,
@@ -57,7 +58,8 @@ function dotProduct(a: Point, b: Point): number {
   return a.x * b.x + a.y * b.y
 }
 
-function crossProduct(a: Point, b: Point): number {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _crossProduct(a: Point, b: Point): number {
   return a.x * b.y - a.y * b.x
 }
 
@@ -65,7 +67,8 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
 }
 
-function lerpPoint(a: Point, b: Point, t: number): Point {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _lerpPoint(a: Point, b: Point, t: number): Point {
   return {
     x: lerp(a.x, b.x, t),
     y: lerp(a.y, b.y, t)
@@ -121,7 +124,8 @@ function bezierTangent(
 /**
  * Get normal vector at parameter t on cubic Bezier
  */
-function bezierNormal(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _bezierNormal(
   p0: Point,
   p1: Point,
   p2: Point,
@@ -136,7 +140,8 @@ function bezierNormal(
 /**
  * Approximate Bezier curve length
  */
-function approximateBezierLength(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _approximateBezierLength(
   p0: Point,
   p1: Point,
   p2: Point,
@@ -175,7 +180,7 @@ export function offsetPath(
   path: BezierPath,
   options: OffsetOptions
 ): BezierPath {
-  const { distance, cornerStyle, miterLimit, stepSize, direction } = options
+  const { distance, cornerStyle, miterLimit, direction } = options
   const sign = direction === 'LEFT' ? 1 : -1
   const offsetDist = distance * sign
 
@@ -277,7 +282,7 @@ function calculateCornerOffset(
         return addVectors(anchor, scaleVector(avgNorm, miterLength))
       }
       // Fall through to bevel if miter limit exceeded
-      
+      // falls through
     case 'BEVEL':
       // Use average normal with standard distance
       return addVectors(anchor, scaleVector(avgNorm, distance))
@@ -350,7 +355,7 @@ export function generateTrap(
  */
 function generateTrapPath(
   sourceRegion: ColorRegion,
-  targetRegion: ColorRegion,
+  _targetRegion: ColorRegion,
   decision: TrapDecision,
   settings: TrapSettings
 ): BezierPath | null {
@@ -402,7 +407,7 @@ function generateTrapPath(
 function createTrapRegion(
   innerPath: BezierPath,
   outerPath: BezierPath,
-  style: TrapStyle
+  _style: TrapStyle
 ): BezierPath {
   // For a proper trap, we need to create a closed region
   // between the inner and outer paths

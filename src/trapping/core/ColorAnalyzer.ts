@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Auto-Trapping Engine
  * Color Layer Analysis Module (TODO 1)

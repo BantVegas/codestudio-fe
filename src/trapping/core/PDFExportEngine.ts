@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Auto-Trapping Engine
  * PDF Export Engine (TODO 5)

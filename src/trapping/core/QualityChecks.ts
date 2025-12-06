@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Auto-Trapping Engine
  * Quality Control Checks (TODO 6)

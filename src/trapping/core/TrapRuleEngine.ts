@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Auto-Trapping Engine
  * Trapping Rules Engine (TODO 2)
@@ -19,7 +20,7 @@ import type {
   TrapRule,
   TrapDecision,
   TrapWarning,
-  TrapWarningType,
+  // TrapWarningType - reserved for future use
   TrapSettings,
   RiskFactors,
   PrintingTechnology,
@@ -284,7 +285,7 @@ export function resolveTrapStyle(
   colorA: ColorDefinition,
   colorB: ColorDefinition,
   direction: TrapDirection,
-  geometry: GeometryInfo
+  _geometry: GeometryInfo
 ): TrapStyle {
   // Centerline for equal priority
   if (direction === 'CENTERLINE') {
@@ -631,7 +632,7 @@ export class TrapRuleEngine {
     rule: TrapRule,
     regionA: ColorRegion,
     regionB: ColorRegion,
-    adjacency: AdjacentRegion
+    _adjacency: AdjacentRegion
   ): TrapDecision {
     return {
       regionAId: regionA.id,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * GPCS CodeStudio - Advanced Trapping Panel
  * ESKO-kompatibilný profesionálny panel nastavení

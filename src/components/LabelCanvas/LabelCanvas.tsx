@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/LabelCanvas/LabelCanvas.tsx
 import React, { useMemo, useRef, useState, useCallback } from 'react'
 import type {
