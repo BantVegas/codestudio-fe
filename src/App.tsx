@@ -397,6 +397,11 @@ const App: React.FC = () => {
   const [canvasZoom, setCanvasZoom] = useState(1)
   const [labelOrientation] = useState<LabelOrientation>('HEAD_UP')
 
+  // Help/Onboarding
+  const [showHelp, setShowHelp] = useState(() => {
+    return localStorage.getItem('gpcs-codegen-help-dismissed') !== 'true'
+  })
+
   // Zbaliteľné grafické nástroje
   const [showGraphicTools, setShowGraphicTools] = useState(false)
   // Modal pre canvas nastavenia
@@ -1361,6 +1366,134 @@ showpage
           />
         </div>
       </div>
+
+      {/* =====================
+       * HELP OVERLAY
+       * ===================== */}
+      {showHelp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="relative w-[520px] max-h-[85vh] overflow-y-auto rounded-2xl border border-slate-600 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <span className="text-3xl">📊</span>
+                Vitaj v Code Generator
+              </h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="text-slate-400 hover:text-white text-2xl transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Intro */}
+            <p className="text-slate-300 text-sm mb-5 leading-relaxed">
+              Profesionálny nástroj na generovanie čiarových kódov a QR kódov 
+              pre flexotlač, digitálnu tlač a ofset.
+            </p>
+
+            {/* Steps */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <span className="text-xl w-8 text-center">{codeValue ? '✅' : '1️⃣'}</span>
+                <div className="flex-1">
+                  <div className="font-medium text-white text-sm">Vyber typ kódu</div>
+                  <div className="text-xs text-slate-400">EAN-13, QR Code, Code 128, DataMatrix...</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <span className="text-xl w-8 text-center">2️⃣</span>
+                <div className="flex-1">
+                  <div className="font-medium text-white text-sm">Zadaj hodnotu</div>
+                  <div className="text-xs text-slate-400">Číslo produktu, URL, text alebo GS1 dáta</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <span className="text-xl w-8 text-center">3️⃣</span>
+                <div className="flex-1">
+                  <div className="font-medium text-white text-sm">Nastav parametre</div>
+                  <div className="text-xs text-slate-400">X-dim, zväčšenie, farby, rozmery etikety</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/30 border border-dashed border-slate-600">
+                <span className="text-xl w-8 text-center">⚙️</span>
+                <div className="flex-1">
+                  <div className="font-medium text-slate-300 text-sm">Pokročilé <span className="text-slate-500">(voliteľné)</span></div>
+                  <div className="text-xs text-slate-500">VDP, Step & Repeat, strojové nastavenia</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <span className="text-xl w-8 text-center">4️⃣</span>
+                <div className="flex-1">
+                  <div className="font-medium text-white text-sm">Exportuj</div>
+                  <div className="text-xs text-slate-400">SVG, PNG, PDF, EPS, TIFF</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Toolbar hint */}
+            <div className="mt-5 p-3 bg-gradient-to-r from-violet-500/10 to-pink-500/10 rounded-lg border border-violet-500/30">
+              <div className="text-xs text-slate-300">
+                <span className="text-violet-400 font-bold">💡 Tip:</span> Použi horný toolbar pre rýchly prístup:
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="px-2 py-1 bg-sky-500/20 text-sky-300 text-xs rounded">⚙️ VDP</span>
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded">🔁 S&R</span>
+                <span className="px-2 py-1 bg-violet-500/20 text-violet-300 text-xs rounded">💾 Export</span>
+                <span className="px-2 py-1 bg-amber-500/20 text-amber-300 text-xs rounded">🏭 Stroj</span>
+                <span className="px-2 py-1 bg-rose-500/20 text-rose-300 text-xs rounded">📋 Job</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-5 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-600 bg-slate-700"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      localStorage.setItem('gpcs-codegen-help-dismissed', 'true')
+                    } else {
+                      localStorage.removeItem('gpcs-codegen-help-dismissed')
+                    }
+                  }}
+                />
+                Nezobrazovať znova
+              </label>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="px-5 py-2 bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold rounded-lg hover:from-violet-500 hover:to-pink-500 transition-all"
+              >
+                Začať →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setShowHelp(true)}
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-violet-600 to-pink-600 text-white text-xl shadow-lg hover:scale-110 hover:shadow-xl transition-all flex items-center justify-center"
+        title="Nápoveda"
+      >
+        ❓
+      </button>
+
+      {/* Contextual Hints */}
+      {!codeValue && !showHelp && (
+        <div className="fixed bottom-20 right-6 z-40 max-w-xs p-3 bg-slate-800/95 border border-violet-500/50 rounded-lg shadow-lg animate-pulse">
+          <div className="text-xs text-slate-300">
+            <span className="text-violet-400 font-bold">👈 Krok 1:</span> Vyber typ kódu a zadaj hodnotu v ľavom paneli
+          </div>
+        </div>
+      )}
     </div>
   )
 }
