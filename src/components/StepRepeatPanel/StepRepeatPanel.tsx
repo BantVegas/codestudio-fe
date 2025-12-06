@@ -14,7 +14,6 @@ interface StepRepeatPanelProps {
   onUpdateConfig: (config: StepRepeatConfig) => void
   labelConfig: LabelConfig
   onGenerateLayout: () => void
-  onExportLayout: () => void
 }
 
 const STAGGER_MODES: { value: StaggerMode; label: string }[] = [
@@ -29,7 +28,6 @@ export const StepRepeatPanel: React.FC<StepRepeatPanelProps> = ({
   onUpdateConfig,
   labelConfig,
   onGenerateLayout,
-  onExportLayout,
 }) => {
   const [previewScale, setPreviewScale] = useState(0.3)
 
@@ -169,23 +167,40 @@ export const StepRepeatPanel: React.FC<StepRepeatPanelProps> = ({
     onUpdateConfig({ ...sheetConfig, ...updates } as SheetStepRepeat)
   }
 
-  return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-700 bg-slate-900/80">
-      {/* Header */}
-      <div className="border-b border-slate-700 px-3 py-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Step & Repeat
-        </h2>
-      </div>
+  const handleGenerateLayout = () => {
+    onGenerateLayout()
+    alert('Layout bol vygenerovaný!')
+  }
 
+  const handleExportLayout = () => {
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+     width="${isWebMode ? webConfig.webWidthMm : sheetConfig.sheetWidthMm}mm" 
+     height="${isWebMode ? webConfig.repeatLengthMm : sheetConfig.sheetHeightMm}mm"
+     viewBox="0 0 ${isWebMode ? webConfig.webWidthMm : sheetConfig.sheetWidthMm} ${isWebMode ? webConfig.repeatLengthMm : sheetConfig.sheetHeightMm}">
+  <rect width="100%" height="100%" fill="#f0f0f0" stroke="#333" stroke-width="0.5"/>
+  <text x="50%" y="50%" text-anchor="middle" font-size="8" fill="#666">Step & Repeat Layout</text>
+</svg>`
+    
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `step-repeat-layout-${Date.now()}.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="flex h-full flex-col">
       {/* Mode toggle */}
-      <div className="border-b border-slate-700 p-2">
-        <div className="grid grid-cols-2 gap-1">
+      <div className="border-b border-slate-600 p-4">
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => handleModeChange('WEB')}
-            className={`rounded py-1.5 text-[10px] font-medium transition-colors ${
+            className={`rounded-xl py-3 text-sm font-semibold transition-all ${
               isWebMode
-                ? 'bg-sky-600 text-white'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/30'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
@@ -193,9 +208,9 @@ export const StepRepeatPanel: React.FC<StepRepeatPanelProps> = ({
           </button>
           <button
             onClick={() => handleModeChange('SHEET')}
-            className={`rounded py-1.5 text-[10px] font-medium transition-colors ${
+            className={`rounded-xl py-3 text-sm font-semibold transition-all ${
               !isWebMode
-                ? 'bg-sky-600 text-white'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/30'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
@@ -205,136 +220,145 @@ export const StepRepeatPanel: React.FC<StepRepeatPanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {/* WEB MODE */}
         {isWebMode && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Web dimensions */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Šírka pásu (mm)</label>
-                <input
-                  type="number"
-                  value={webConfig.webWidthMm}
-                  onChange={(e) => updateWebConfig({ webWidthMm: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Repeat dĺžka (mm)</label>
-                <input
-                  type="number"
-                  value={webConfig.repeatLengthMm}
-                  onChange={(e) => updateWebConfig({ repeatLengthMm: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-white">📐 Rozmery pásu</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Šírka pásu (mm)</label>
+                  <input
+                    type="number"
+                    value={webConfig.webWidthMm}
+                    onChange={(e) => updateWebConfig({ webWidthMm: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Repeat dĺžka (mm)</label>
+                  <input
+                    type="number"
+                    value={webConfig.repeatLengthMm}
+                    onChange={(e) => updateWebConfig({ repeatLengthMm: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Lanes and rows */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">
-                  Lanes (max: {webCalculations?.maxLanes || '-'})
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={webCalculations?.maxLanes || 10}
-                  value={webConfig.lanes}
-                  onChange={(e) => updateWebConfig({ lanes: parseInt(e.target.value) || 1 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">
-                  Rows (max: {webCalculations?.maxRows || '-'})
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={webCalculations?.maxRows || 20}
-                  value={webConfig.rows}
-                  onChange={(e) => updateWebConfig({ rows: parseInt(e.target.value) || 1 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-white">🔢 Rozloženie</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">
+                    Lanes (max: {webCalculations?.maxLanes || '-'})
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={webCalculations?.maxLanes || 10}
+                    value={webConfig.lanes}
+                    onChange={(e) => updateWebConfig({ lanes: parseInt(e.target.value) || 1 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">
+                    Rows (max: {webCalculations?.maxRows || '-'})
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={webCalculations?.maxRows || 20}
+                    value={webConfig.rows}
+                    onChange={(e) => updateWebConfig({ rows: parseInt(e.target.value) || 1 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Gaps */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Horizontálna medzera (mm)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={webConfig.horizontalGapMm}
-                  onChange={(e) => updateWebConfig({ horizontalGapMm: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Vertikálna medzera (mm)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={webConfig.verticalGapMm}
-                  onChange={(e) => updateWebConfig({ verticalGapMm: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
-                />
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-white">↔️ Medzery</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Horizontálna (mm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={webConfig.horizontalGapMm}
+                    onChange={(e) => updateWebConfig({ horizontalGapMm: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Vertikálna (mm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={webConfig.verticalGapMm}
+                    onChange={(e) => updateWebConfig({ verticalGapMm: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Margins */}
-            <div className="rounded border border-slate-700 bg-slate-800/50 p-2">
-              <h4 className="mb-2 text-[10px] font-medium text-slate-300">Okraje</h4>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-white">📏 Okraje</h4>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-0.5 block text-[9px] text-slate-400">Ľavý (mm)</label>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Ľavý (mm)</label>
                   <input
                     type="number"
                     value={webConfig.leftMarginMm}
                     onChange={(e) => updateWebConfig({ leftMarginMm: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[9px] text-slate-400">Pravý (mm)</label>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Pravý (mm)</label>
                   <input
                     type="number"
                     value={webConfig.rightMarginMm}
                     onChange={(e) => updateWebConfig({ rightMarginMm: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[9px] text-slate-400">Nábehu (mm)</label>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Nábehu (mm)</label>
                   <input
                     type="number"
                     value={webConfig.leadingEdgeMm}
                     onChange={(e) => updateWebConfig({ leadingEdgeMm: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[9px] text-slate-400">Výbehu (mm)</label>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Výbehu (mm)</label>
                   <input
                     type="number"
                     value={webConfig.trailingEdgeMm}
                     onChange={(e) => updateWebConfig({ trailingEdgeMm: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                   />
                 </div>
               </div>
             </div>
 
             {/* Stagger */}
-            <div>
-              <label className="mb-1 block text-[9px] text-slate-400">Stagger (šachovnica)</label>
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-white">🔀 Stagger</h4>
               <select
                 value={webConfig.staggerMode}
                 onChange={(e) => updateWebConfig({ staggerMode: e.target.value as StaggerMode })}
-                className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[10px] text-slate-200"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
               >
                 {STAGGER_MODES.map(sm => (
                   <option key={sm.value} value={sm.value}>{sm.label}</option>
@@ -625,21 +649,22 @@ export const StepRepeatPanel: React.FC<StepRepeatPanelProps> = ({
             )}
           </div>
         </div>
+
       </div>
 
       {/* Actions */}
-      <div className="border-t border-slate-700 p-3 space-y-2">
+      <div className="border-t border-slate-600 p-4 space-y-3">
         <button
-          onClick={onGenerateLayout}
-          className="w-full rounded bg-sky-600 py-2 text-[11px] font-medium text-white hover:bg-sky-500"
+          onClick={handleGenerateLayout}
+          className="w-full rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition-all hover:bg-sky-500"
         >
           Generovať layout
         </button>
         <button
-          onClick={onExportLayout}
-          className="w-full rounded bg-emerald-600 py-2 text-[11px] font-medium text-white hover:bg-emerald-500"
+          onClick={handleExportLayout}
+          className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-500 hover:to-emerald-400"
         >
-          Exportovať step & repeat PDF
+          Exportovať step & repeat SVG
         </button>
       </div>
     </div>

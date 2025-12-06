@@ -118,55 +118,49 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   }, [exportSettings, labelConfig])
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-700 bg-slate-900/80">
-      {/* Header */}
-      <div className="border-b border-slate-700 px-3 py-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Export
-        </h2>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-slate-700">
+    <div className="flex h-full flex-col rounded-xl border border-slate-600 bg-slate-900/90">
+      {/* Tabs - väčšie a čitateľnejšie */}
+      <div className="flex border-b border-slate-600 bg-slate-800/50">
         {[
-          { id: 'format', label: 'Formát' },
-          { id: 'colors', label: 'Farby' },
-          { id: 'marks', label: 'Značky' },
-          { id: 'preview', label: 'Náhľad' },
+          { id: 'format', label: 'Formát', icon: '📄' },
+          { id: 'colors', label: 'Farby', icon: '🎨' },
+          { id: 'marks', label: 'Značky', icon: '✂️' },
+          { id: 'preview', label: 'Náhľad', icon: '👁️' },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? 'border-b-2 border-sky-500 text-sky-400'
-                : 'text-slate-400 hover:text-slate-300'
+                ? 'border-b-3 border-sky-500 bg-sky-500/10 text-sky-300'
+                : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
             }`}
           >
-            {tab.label}
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {/* FORMAT TAB */}
         {activeTab === 'format' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Export format */}
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-400">
+              <label className="mb-2 block text-sm font-medium text-slate-300">
                 Formát výstupu
               </label>
-              <div className="grid grid-cols-5 gap-1">
+              <div className="grid grid-cols-5 gap-2">
                 {EXPORT_FORMATS.map(fmt => (
                   <button
                     key={fmt.value}
                     onClick={() => onUpdateSettings({ format: fmt.value })}
-                    className={`rounded border px-2 py-1.5 text-center text-[10px] transition-colors ${
+                    className={`rounded-lg border-2 px-3 py-3 text-center text-sm font-medium transition-all ${
                       exportSettings.format === fmt.value
-                        ? 'border-sky-500 bg-sky-500/20 text-sky-300'
-                        : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500'
+                        ? 'border-sky-500 bg-sky-500/20 text-sky-200 shadow-lg shadow-sky-500/20'
+                        : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-sky-400 hover:bg-slate-700'
                     }`}
                     title={fmt.description}
                   >
@@ -174,6 +168,9 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                   </button>
                 ))}
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                {EXPORT_FORMATS.find(f => f.value === exportSettings.format)?.description}
+              </p>
             </div>
 
             {/* PDF Version */}
@@ -563,16 +560,17 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       </div>
 
       {/* Layers info */}
-      <div className="border-t border-slate-800 px-3 py-1 text-[9px] text-slate-500">
-        Vrstvy v label canvase: {layers.length}
+      <div className="border-t border-slate-700 px-4 py-2 text-xs text-slate-400">
+        Vrstvy v label canvase: <span className="font-medium text-slate-300">{layers.length}</span>
       </div>
 
       {/* Export button */}
-      <div className="border-t border-slate-700 p-3">
+      <div className="border-t border-slate-600 bg-slate-800/50 p-4">
         <button
           onClick={handleExport}
-          className="w-full rounded bg-emerald-600 py-2 text-[11px] font-medium text-white hover:bg-emerald-500"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-500 hover:to-emerald-400 hover:shadow-emerald-500/40"
         >
+          <span className="text-xl">💾</span>
           Exportovať {exportSettings.format}
         </button>
       </div>

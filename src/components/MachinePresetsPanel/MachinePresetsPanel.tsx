@@ -181,24 +181,17 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-700 bg-slate-900/80">
-      {/* Header */}
-      <div className="border-b border-slate-700 px-3 py-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Strojové nastavenia
-        </h2>
-      </div>
-
+    <div className="flex h-full flex-col">
       {/* Tabs */}
-      <div className="flex border-b border-slate-700">
+      <div className="flex border-b border-slate-600">
         {(['presets', 'distortion', 'custom'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 text-[10px] font-medium transition-colors ${
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
               activeTab === tab
-                ? 'border-b-2 border-sky-500 text-sky-400'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'border-b-2 border-sky-500 bg-sky-500/10 text-sky-400'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
             }`}
           >
             {tab === 'presets' && '🖨️ Stroje'}
@@ -209,39 +202,39 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {/* PRESETS TAB */}
         {activeTab === 'presets' && (
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-4">
             {allPresets.map(preset => (
               <button
                 key={preset.id}
                 onClick={() => handleSelectPreset(preset)}
-                className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
                   selectedPresetId === preset.id
-                    ? 'border-sky-500 bg-sky-500/10'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                    ? 'border-sky-500 bg-sky-500/10 shadow-lg shadow-sky-500/20'
+                    : 'border-slate-600 bg-slate-800/50 hover:border-slate-500 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-200">{preset.name}</span>
-                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${
+                  <span className="text-base font-semibold text-slate-100">{preset.name}</span>
+                  <span className={`rounded-lg px-2 py-1 text-xs font-medium ${
                     preset.type === 'DIGITAL' ? 'bg-purple-500/20 text-purple-300' : 'bg-emerald-500/20 text-emerald-300'
                   }`}>
                     {MACHINE_TYPE_LABELS[preset.type]}
                   </span>
                 </div>
-                <div className="mt-1 text-[10px] text-slate-400">
+                <div className="mt-2 text-sm text-slate-400">
                   {preset.manufacturer} {preset.model}
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-1 text-[9px] text-slate-500">
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
                   <span>Šírka: {preset.minWebWidthMm}–{preset.maxWebWidthMm} mm</span>
                   <span>Repeat: {preset.minRepeatLengthMm}–{preset.maxRepeatLengthMm} mm</span>
                   <span>Min X-dim: {preset.minXDimMm} mm</span>
                   <span>Max LPI: {preset.maxLpi}</span>
                 </div>
                 {preset.type === 'FLEXO' && (
-                  <div className="mt-1 text-[9px] text-amber-400">
+                  <div className="mt-2 text-xs font-medium text-amber-400">
                     ⚠️ Distortion: {preset.defaultDistortionPercent}%
                   </div>
                 )}
@@ -252,22 +245,22 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
 
         {/* DISTORTION TAB */}
         {activeTab === 'distortion' && (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-              <label className="mb-3 flex items-center gap-2 text-xs text-slate-300">
+          <div className="space-y-5">
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-5">
+              <label className="mb-4 flex items-center gap-3 text-base font-medium text-slate-200">
                 <input
                   type="checkbox"
                   checked={distortionSettings.enabled}
                   onChange={e => onApplyDistortion({ ...distortionSettings, enabled: e.target.checked })}
-                  className="h-4 w-4"
+                  className="h-5 w-5 rounded border-slate-500 bg-slate-700 text-sky-500"
                 />
                 Povoliť distortion kompenzáciu
               </label>
 
               {distortionSettings.enabled && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <label className="mb-1 block text-[10px] text-slate-400">
+                    <label className="mb-2 block text-sm font-medium text-slate-300">
                       Web smer (%) – roztiahnutie v smere pásu
                     </label>
                     <input
@@ -275,15 +268,15 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
                       step="0.05"
                       value={distortionSettings.webDirectionPercent}
                       onChange={e => onApplyDistortion({ ...distortionSettings, webDirectionPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                      className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                     />
-                    <p className="mt-1 text-[9px] text-slate-500">
+                    <p className="mt-2 text-xs text-slate-500">
                       Typické hodnoty: Flexo 0.2–0.5%, Offset 0.1–0.2%
                     </p>
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] text-slate-400">
+                    <label className="mb-2 block text-sm font-medium text-slate-300">
                       Cross smer (%) – roztiahnutie priečne
                     </label>
                     <input
@@ -291,16 +284,16 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
                       step="0.05"
                       value={distortionSettings.crossDirectionPercent}
                       onChange={e => onApplyDistortion({ ...distortionSettings, crossDirectionPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                      className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200"
                     />
                   </div>
 
-                  <label className="flex items-center gap-2 text-[10px] text-slate-400">
+                  <label className="flex items-center gap-3 text-sm text-slate-300">
                     <input
                       type="checkbox"
                       checked={distortionSettings.previewDistorted}
                       onChange={e => onApplyDistortion({ ...distortionSettings, previewDistorted: e.target.checked })}
-                      className="h-3 w-3"
+                      className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-sky-500"
                     />
                     Zobraziť distortovaný náhľad
                   </label>
@@ -309,11 +302,11 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
             </div>
 
             {selectedPreset && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                <h4 className="mb-1 text-[10px] font-medium text-amber-300">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
+                <h4 className="mb-2 text-base font-semibold text-amber-300">
                   Odporúčanie pre {selectedPreset.name}
                 </h4>
-                <p className="text-[9px] text-amber-200/70">
+                <p className="text-sm text-amber-200/70">
                   Pre {MACHINE_TYPE_LABELS[selectedPreset.type]} odporúčame distortion {selectedPreset.defaultDistortionPercent}% v smere pásu.
                 </p>
                 <button
@@ -323,7 +316,7 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
                     crossDirectionPercent: 0,
                     previewDistorted: true,
                   })}
-                  className="mt-2 rounded bg-amber-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-amber-500"
+                  className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500"
                 >
                   Použiť odporúčané
                 </button>
@@ -334,13 +327,13 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
 
         {/* CUSTOM TAB */}
         {activeTab === 'custom' && (
-          <div className="space-y-3">
-            <p className="text-[10px] text-slate-400">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400">
               Vytvorte vlastný strojový preset pre váš tlačový stroj.
             </p>
-            <div className="rounded-lg border border-dashed border-slate-600 p-4 text-center">
-              <span className="text-2xl">🏭</span>
-              <p className="mt-2 text-[10px] text-slate-400">
+            <div className="rounded-xl border-2 border-dashed border-slate-600 p-8 text-center">
+              <span className="text-4xl">🏭</span>
+              <p className="mt-3 text-base text-slate-400">
                 Funkcia bude dostupná v ďalšej verzii
               </p>
             </div>
@@ -350,10 +343,10 @@ export const MachinePresetsPanel: React.FC<MachinePresetsPanelProps> = ({
 
       {/* Footer with selected preset info */}
       {selectedPreset && (
-        <div className="border-t border-slate-700 px-3 py-2">
-          <div className="flex items-center justify-between text-[10px]">
+        <div className="border-t border-slate-600 px-4 py-3">
+          <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">Aktívny stroj:</span>
-            <span className="font-medium text-sky-300">{selectedPreset.name}</span>
+            <span className="font-semibold text-sky-300">{selectedPreset.name}</span>
           </div>
         </div>
       )}

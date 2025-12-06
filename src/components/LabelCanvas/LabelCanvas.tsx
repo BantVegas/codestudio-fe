@@ -570,36 +570,6 @@ export const LabelCanvas: React.FC<LabelCanvasProps> = ({
         </g>
       </svg>
 
-      {/* Zone legend */}
-      <div className="absolute bottom-2 right-2 flex gap-3 rounded bg-slate-900/80 px-2 py-1 text-[9px]">
-        {showBleedZone && (
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-sm bg-amber-500/50" />
-            Bleed
-          </span>
-        )}
-        {showTrimZone && (
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-sm bg-blue-500" />
-            Trim
-          </span>
-        )}
-        {showSafeZone && (
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-sm border border-emerald-500 bg-transparent" />
-            Safe
-          </span>
-        )}
-        {snapToGrid && (
-          <button
-            type="button"
-            onClick={snapSelectedToGrid}
-            className="ml-1 rounded border border-slate-600 px-1.5 py-0.5 text-[9px] text-slate-300 hover:border-sky-500 hover:text-sky-300"
-          >
-            Snap na grid
-          </button>
-        )}
-      </div>
     </div>
   )
 }

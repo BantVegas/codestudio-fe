@@ -296,63 +296,73 @@ export const LeftPanel: React.FC<LeftPanelProps> = props => {
             </div>
           </div>
 
-          {/* Mini menu – DATA / EXPORT / BACKEND / VDP_IMPORT */}
-          <div className="flex flex-wrap gap-1.5 text-[10px]">
-            <button
-              type="button"
-              onClick={() => setLeftPanelSection('DATA')}
-              className={`rounded-full border px-2 py-0.5 transition-colors ${
-                leftPanelSection === 'DATA'
-                  ? 'border-sky-500 bg-sky-600/20 text-sky-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-sky-500'
-              }`}
-            >
-              Dáta / GS1
-            </button>
-            <button
-              type="button"
-              onClick={() => setLeftPanelSection('EXPORT')}
-              className={`rounded-full border px-2 py-0.5 transition-colors ${
-                leftPanelSection === 'EXPORT'
-                  ? 'border-amber-500 bg-amber-600/20 text-amber-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500'
-              }`}
-            >
-              Export &amp; pozícia
-            </button>
-            <button
-              type="button"
-              onClick={() => setLeftPanelSection('LAYOUT')}
-              className={`rounded-full border px-2 py-0.5 transition-colors ${
-                leftPanelSection === 'LAYOUT'
-                  ? 'border-amber-500 bg-amber-600/20 text-amber-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500'
-              }`}
-            >
-              Layout / S&R
-            </button>
-            <button
-              type="button"
-              onClick={() => setLeftPanelSection('VDP_IMPORT')}
-              className={`rounded-full border px-2 py-0.5 transition-colors ${
-                leftPanelSection === 'VDP_IMPORT'
-                  ? 'border-emerald-500 bg-emerald-600/20 text-emerald-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-500'
-              }`}
-            >
-              VDP Import
-            </button>
-            <button
-              type="button"
-              onClick={() => setLeftPanelSection('BACKEND')}
-              className={`rounded-full border px-2 py-0.5 transition-colors ${
-                leftPanelSection === 'BACKEND'
-                  ? 'border-purple-500 bg-purple-600/20 text-purple-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-purple-500'
-              }`}
-            >
-              Overenie
-            </button>
+          {/* Hlavné menu - prehľadné a intuitívne */}
+          <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-3">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+              Nastavenia
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setLeftPanelSection('DATA')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm font-medium transition-all ${
+                  leftPanelSection === 'DATA'
+                    ? 'border-sky-500 bg-sky-500/20 text-sky-100 shadow-lg shadow-sky-500/20'
+                    : 'border-slate-600/50 bg-slate-800/50 text-slate-300 hover:border-sky-400 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-lg">📊</span>
+                <span>Dáta</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelSection('EXPORT')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm font-medium transition-all ${
+                  leftPanelSection === 'EXPORT'
+                    ? 'border-amber-500 bg-amber-500/20 text-amber-100 shadow-lg shadow-amber-500/20'
+                    : 'border-slate-600/50 bg-slate-800/50 text-slate-300 hover:border-amber-400 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-lg">📐</span>
+                <span>Rozmer</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelSection('LAYOUT')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm font-medium transition-all ${
+                  leftPanelSection === 'LAYOUT'
+                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-100 shadow-lg shadow-emerald-500/20'
+                    : 'border-slate-600/50 bg-slate-800/50 text-slate-300 hover:border-emerald-400 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-lg">🔁</span>
+                <span>Layout</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelSection('VDP_IMPORT')}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm font-medium transition-all ${
+                  leftPanelSection === 'VDP_IMPORT'
+                    ? 'border-violet-500 bg-violet-500/20 text-violet-100 shadow-lg shadow-violet-500/20'
+                    : 'border-slate-600/50 bg-slate-800/50 text-slate-300 hover:border-violet-400 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-lg">📥</span>
+                <span>VDP</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelSection('BACKEND')}
+                className={`col-span-2 flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all ${
+                  leftPanelSection === 'BACKEND'
+                    ? 'border-purple-500 bg-purple-500/20 text-purple-100 shadow-lg shadow-purple-500/20'
+                    : 'border-slate-600/50 bg-slate-800/50 text-slate-300 hover:border-purple-400 hover:bg-slate-700/50'
+                }`}
+              >
+                <span className="text-lg">✅</span>
+                <span>Overenie GS1</span>
+              </button>
+            </div>
           </div>
 
           {/* GS1 FORM panel */}

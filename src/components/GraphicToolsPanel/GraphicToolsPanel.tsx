@@ -192,25 +192,26 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
   }
 
   return (
-    <section className="flex h-full flex-col gap-4 overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <section className="flex h-full flex-col gap-5 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900/80 p-5">
       {/* Tlač & normy */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+            <span>🎯</span>
             Tlač &amp; normy
           </h2>
-          <span className="text-[10px] text-slate-500">
+          <span className="rounded-lg bg-slate-700 px-3 py-1 text-sm font-medium text-slate-300">
             {codeType}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-[11px]">
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">Rotácia</label>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">Rotácia</label>
             <select
               value={rotation}
               onChange={e => setRotation(Number(e.target.value) as Rotation)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             >
               {rotationOptions.map(r => (
                 <option key={r} value={r}>
@@ -220,8 +221,8 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Smer tlače
             </label>
             <select
@@ -229,15 +230,15 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               onChange={e =>
                 setPrintDirection(e.target.value as PrintDirection)
               }
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             >
               <option value="ALONG_WEB">Pozdĺž pásu</option>
               <option value="ACROSS_WEB">Naprieč pásom</option>
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               X-dim (mm)
             </label>
             <input
@@ -245,12 +246,12 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               step="0.01"
               value={xDimMm}
               onChange={handleNumberChange(setXDimMm)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Quiet zone (mm)
             </label>
             <input
@@ -258,12 +259,12 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               step="0.1"
               value={quietZoneMm}
               onChange={handleNumberChange(setQuietZoneMm)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Magnifikácia (%)
             </label>
             <input
@@ -271,12 +272,12 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               step="1"
               value={magnificationPercent}
               onChange={handleNumberChange(setMagnificationPercent)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               BWR (mm)
             </label>
             <input
@@ -284,16 +285,17 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               step="0.001"
               value={barWidthReductionMm}
               onChange={handleNumberChange(setBarWidthReductionMm)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
         </div>
       </div>
 
       {/* Profily tlače - nový rozšírený panel */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+            <span>🖨️</span>
             Profily tlače
           </h2>
           {selectedProfile && (
@@ -432,83 +434,84 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
       </div>
 
       {/* VDP / seriové čísla */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+            <span>🔢</span>
             VDP / séria
           </h2>
-          <label className="flex items-center gap-1 text-[10px] text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="checkbox"
               checked={vdpEnabled}
               onChange={e => setVdpEnabled(e.target.checked)}
-              className="h-3 w-3 rounded border-slate-600 bg-slate-900 text-sky-500"
+              className="h-5 w-5 rounded border-slate-500 bg-slate-700 text-sky-500"
             />
             Aktivné
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-[11px]">
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Začiatok série
             </label>
             <input
               type="number"
               value={serialStart}
               onChange={handleNumberChange(setSerialStart)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Aktuálne #
             </label>
             <input
               type="number"
               value={serialCurrent}
               onChange={handleNumberChange(setSerialCurrent)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Padding (počet číslic)
             </label>
             <input
               type="number"
               value={serialPadding}
               onChange={handleNumberChange(setSerialPadding)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Počet kusov
             </label>
             <input
               type="number"
               value={vdpCount}
               onChange={handleNumberChange(setVdpCount)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Prefix
             </label>
             <input
               type="text"
               value={vdpPrefix}
               onChange={e => setVdpPrefix(e.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Alfa štart
             </label>
             <input
@@ -516,51 +519,54 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               maxLength={1}
               value={vdpAlphaStartChar}
               onChange={e => setVdpAlphaStartChar(e.target.value.toUpperCase())}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-center text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-center text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
         </div>
 
-        <div className="mt-2 space-y-1">
-          <label className="block text-[10px] text-slate-400">
+        <div className="mt-4 space-y-2">
+          <label className="block text-sm font-medium text-slate-300">
             Vzor (pattern)
           </label>
           <input
             type="text"
             value={vdpPattern}
             onChange={e => setVdpPattern(e.target.value)}
-            className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+            className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
           />
-          <p className="text-[9px] text-slate-500">
+          <p className="text-xs text-slate-500">
             Tokeny: [SERIAL], [PREFIX], [ALPHA] podľa zvoleného VDP režimu.
           </p>
         </div>
 
-        <div className="mt-2 flex gap-2 text-[11px]">
-          <label className="flex items-center gap-1 text-[10px] text-slate-400">
+        <div className="mt-4 flex gap-4">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="radio"
               value="LINEAR"
               checked={vdpMode === 'LINEAR'}
               onChange={() => setVdpMode('LINEAR')}
+              className="h-4 w-4"
             />
             Lineárne
           </label>
-          <label className="flex items-center gap-1 text-[10px] text-slate-400">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="radio"
               value="PREFIX"
               checked={vdpMode === 'PREFIX'}
               onChange={() => setVdpMode('PREFIX')}
+              className="h-4 w-4"
             />
             Prefix
           </label>
-          <label className="flex items-center gap-1 text-[10px] text-slate-400">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="radio"
               value="ALPHA"
               checked={vdpMode === 'ALPHA'}
               onChange={() => setVdpMode('ALPHA')}
+              className="h-4 w-4"
             />
             Alfa
           </label>
@@ -568,36 +574,37 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
       </div>
 
       {/* Grafika & shape */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-white">
+          <span>🎨</span>
           Grafika &amp; shape
         </h2>
 
-        <div className="grid grid-cols-3 gap-2 text-[11px]">
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Výška čiar (px)
             </label>
             <input
               type="number"
               value={barHeightPx}
               onChange={handleNumberChange(setBarHeightPx)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               HR font (pt)
             </label>
             <input
               type="number"
               value={hrFontSizePt}
               onChange={handleNumberChange(setHrFontSizePt)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Zaoblenie rohov (mm)
             </label>
             <input
@@ -605,110 +612,111 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
               step="0.1"
               value={labelBorderRadiusMm}
               onChange={handleNumberChange(setLabelBorderRadiusMm)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
             />
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-[11px]">
-          <label className="flex items-center gap-2 text-[10px] text-slate-300">
+        <div className="mt-4 flex items-center justify-between">
+          <label className="flex items-center gap-3 text-sm text-slate-300">
             <input
               type="checkbox"
               checked={showHrText}
               onChange={e => setShowHrText(e.target.checked)}
-              className="h-3 w-3 rounded border-slate-600 bg-slate-900 text-sky-500"
+              className="h-5 w-5 rounded border-slate-500 bg-slate-700 text-sky-500"
             />
             Zobraziť HR text
           </label>
 
-          <label className="flex items-center gap-2 text-[10px] text-slate-300">
+          <label className="flex items-center gap-3 text-sm text-slate-300">
             <input
               type="checkbox"
               checked={showDimensionGuides}
               onChange={e => setShowDimensionGuides(e.target.checked)}
-              className="h-3 w-3 rounded border-slate-600 bg-slate-900 text-sky-500"
+              className="h-5 w-5 rounded border-slate-500 bg-slate-700 text-sky-500"
             />
             Rozmerové vodiace čiary
           </label>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Farba čiar
             </label>
             <input
               type="color"
               value={barColor}
               onChange={handleColorChange(setBarColor)}
-              className="h-7 w-full cursor-pointer rounded-md border border-slate-600 bg-slate-900"
+              className="h-10 w-full cursor-pointer rounded-lg border border-slate-600 bg-slate-900"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Pozadie
             </label>
             <input
               type="color"
               value={bgColor}
               onChange={handleColorChange(setBgColor)}
-              className="h-7 w-full cursor-pointer rounded-md border border-slate-600 bg-slate-900"
+              className="h-10 w-full cursor-pointer rounded-lg border border-slate-600 bg-slate-900"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] text-slate-400">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
               Text
             </label>
             <input
               type="color"
               value={textColor}
               onChange={handleColorChange(setTextColor)}
-              className="h-7 w-full cursor-pointer rounded-md border border-slate-600 bg-slate-900"
+              className="h-10 w-full cursor-pointer rounded-lg border border-slate-600 bg-slate-900"
             />
           </div>
         </div>
 
-        <div className="mt-3 space-y-1">
-          <label className="block text-[10px] text-slate-400">
+        <div className="mt-4 space-y-2">
+          <label className="block text-sm font-medium text-slate-300">
             Vlastný HR text (override)
           </label>
           <input
             type="text"
             value={hrCustomText}
             onChange={e => setHrCustomText(e.target.value)}
-            className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 outline-none focus:border-sky-500"
+            className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-500"
           />
         </div>
       </div>
 
       {/* QR Logo */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+            <span>🖼️</span>
             QR Logo
           </h2>
           {qrLogoDataUrl && (
             <button
               type="button"
               onClick={() => setQrLogoDataUrl(null)}
-              className="rounded-md border border-red-700 bg-red-900/40 px-2 py-0.5 text-[10px] text-red-100 hover:bg-red-800/70"
+              className="rounded-lg border-2 border-red-600 bg-red-900/40 px-3 py-1.5 text-sm font-medium text-red-100 hover:bg-red-800/70"
             >
               Odstrániť
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex items-center gap-3">
           <input
             type="file"
             accept="image/*"
             onChange={handleQrLogoUpload}
-            className="w-full text-[10px] text-slate-300 file:mr-2 file:rounded-md file:border file:border-slate-600 file:bg-slate-800 file:px-2 file:py-1 file:text-[10px] file:text-slate-100"
+            className="w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border file:border-slate-600 file:bg-slate-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-100"
           />
         </div>
 
-        <div className="mt-2 space-y-1">
-          <label className="block text-[10px] text-slate-400">
+        <div className="mt-4 space-y-2">
+          <label className="block text-sm font-medium text-slate-300">
             Veľkosť loga (%)
           </label>
           <input
@@ -718,9 +726,9 @@ export const GraphicToolsPanel: React.FC<GraphicToolsPanelProps> = props => {
             step={0.01}
             value={qrLogoScale}
             onChange={e => setQrLogoScale(Number(e.target.value))}
-            className="w-full"
+            className="w-full h-3"
           />
-          <p className="text-[9px] text-slate-500">
+          <p className="text-sm text-slate-400">
             {Math.round(qrLogoScale * 100)} % veľkosti QR symbolu.
           </p>
         </div>

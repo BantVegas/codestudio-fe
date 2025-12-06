@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState, useCallback } from 'react'
 import './App.css'
 
 import {
@@ -11,12 +11,12 @@ import {
 import { LeftPanel } from './components/LeftPanel/LeftPanel'
 import { GraphicToolsPanel } from './components/GraphicToolsPanel/GraphicToolsPanel'
 import { PreviewPanel } from './components/PreviewPanel/PreviewPanel'
-import { LabelCanvas } from './components/LabelCanvas/LabelCanvas'
 import { StepRepeatPanel } from './components/StepRepeatPanel/StepRepeatPanel'
 import { ExportPanel } from './components/ExportPanel/ExportPanel'
 import { MachinePresetsPanel } from './components/MachinePresetsPanel/MachinePresetsPanel'
 import { JobTicketPanel } from './components/JobTicketPanel/JobTicketPanel'
-import { LoginPage } from './components/LoginPage/LoginPage'
+import { LoginPage, type AppMode } from './components/LoginPage/LoginPage'
+import { AutoTrapStudio } from './components/AutoTrapStudio/AutoTrapStudio'
 
 import type {
   CodeType,
@@ -36,10 +36,6 @@ import type {
   SeparationPreview,
   MachinePreset,
   LabelOrientation,
-  BarcodeObject,
-  TextObject,
-  ImageObject,
-  LabelObject,
 } from './types/barcodeTypes'
 
 /** BASE URL na BE – primárne z Vite env, fallback na Railway / api.gpcs.online */
@@ -53,6 +49,7 @@ const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, '')
 const App: React.FC = () => {
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [appMode, setAppMode] = useState<AppMode>('CODE_GENERATOR')
 
   /* =====================
    * ZÁKLADNÉ DÁTA KÓDU
@@ -332,7 +329,7 @@ const App: React.FC = () => {
   /* =====================
    * LABEL CANVAS STATE
    * ===================== */
-  const [layers, setLayers] = useState<Layer[]>([
+  const [layers] = useState<Layer[]>([
     {
       id: 'layer_white',
       type: 'WHITE_UNDERPRINT',
@@ -383,10 +380,6 @@ const App: React.FC = () => {
       knockout: true,
     },
   ])
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null)
-  const [showRulers, setShowRulers] = useState(true)
-  const [snapToGrid, setSnapToGrid] = useState(true)
-  const [snapToObjects, setSnapToObjects] = useState(true)
   const [distortionSettings, setDistortionSettings] =
     useState<DistortionSettings>({
       enabled: false,
@@ -396,14 +389,13 @@ const App: React.FC = () => {
     })
 
   // Canvas zobrazenie zón
-  const [showBleedZone, setShowBleedZone] = useState(true)
-  const [showTrimZone, setShowTrimZone] = useState(true)
-  const [showSafeZone, setShowSafeZone] = useState(true)
-  const [showCanvasGrid, setShowCanvasGrid] = useState(true)
+  const [showBleedZone] = useState(true)
+  const [showTrimZone] = useState(true)
+  const [showSafeZone] = useState(true)
+  const [showCanvasGrid] = useState(true)
   const [canvasGridSizeMm, setCanvasGridSizeMm] = useState(1)
   const [canvasZoom, setCanvasZoom] = useState(1)
-  const [labelOrientation, setLabelOrientation] =
-    useState<LabelOrientation>('HEAD_UP')
+  const [labelOrientation] = useState<LabelOrientation>('HEAD_UP')
 
   // Zbaliteľné grafické nástroje
   const [showGraphicTools, setShowGraphicTools] = useState(false)
@@ -467,192 +459,6 @@ const App: React.FC = () => {
   const [showJobTicket, setShowJobTicket] = useState(false)
   const jobId = `JOB-${Date.now().toString(36).toUpperCase()}`
 
-  // Presety etikiet (light verzia, stačí na UI výber)
-  const LABEL_PRESETS_CONFIG = [
-    { id: '50x30', name: '50×30 mm', w: 50, h: 30, category: 'standard' },
-    { id: '80x50', name: '80×50 mm', w: 80, h: 50, category: 'standard' },
-    { id: '100x70', name: '100×70 mm', w: 100, h: 70, category: 'standard' },
-    { id: '100x100', name: '100×100 mm', w: 100, h: 100, category: 'standard' },
-    {
-      id: 'PHARMA_VIAL_25x10',
-      name: 'Pharma Vial 25×10',
-      w: 25,
-      h: 10,
-      category: 'pharma',
-    },
-    {
-      id: 'PHARMA_BOTTLE_50x30',
-      name: 'Pharma Bottle 50×30',
-      w: 50,
-      h: 30,
-      category: 'pharma',
-    },
-    {
-      id: 'PHARMA_BOX_70x40',
-      name: 'Pharma Box 70×40',
-      w: 70,
-      h: 40,
-      category: 'pharma',
-    },
-    {
-      id: 'GS1_A6_105x148',
-      name: 'GS1 A6 (105×148)',
-      w: 105,
-      h: 148,
-      category: 'logistics',
-    },
-    {
-      id: 'PALLET_105x148',
-      name: 'Pallet Label',
-      w: 105,
-      h: 148,
-      category: 'logistics',
-    },
-    {
-      id: 'CUSTOM',
-      name: 'Vlastný rozmer',
-      w: labelWidthMm,
-      h: labelHeightMm,
-      category: 'custom',
-    },
-  ] as const
-
-  const handlePresetChange = (presetId: string) => {
-    const preset = LABEL_PRESETS_CONFIG.find(p => p.id === presetId)
-    if (preset && presetId !== 'CUSTOM') {
-      setLabelWidthMm(preset.w)
-      setLabelHeightMm(preset.h)
-    }
-    setLabelPreset(presetId as LabelPreset)
-  }
-
-  // Pridávanie objektov
-  const addBarcodeObject = () => {
-    const newObj: BarcodeObject = {
-      id: `barcode_${Date.now()}`,
-      type: 'barcode',
-      name: 'Barcode',
-      layer: 'BARCODE',
-      xMm: safeMarginMm,
-      yMm: safeMarginMm,
-      widthMm: 30,
-      heightMm: 15,
-      rotation: 0,
-      horizontalAlign: 'left',
-      verticalAlign: 'top',
-      fillColor: '#ffffff',
-      strokeColor: '#000000',
-      strokeWidthMm: 0,
-      opacity: 1,
-      locked: false,
-      visible: true,
-      printable: true,
-      codeType: codeType,
-      value: codeValue || '123456789012',
-      xDimMm: xDimMm,
-      barHeightMm: 15,
-      magnificationPercent: magnificationPercent,
-      barWidthReductionMm: barWidthReductionMm,
-      quietZoneMm: quietZoneMm,
-      showHrText: showHrText,
-      hrFontFamily: 'OCR-B',
-      hrFontSizePt: hrFontSizePt,
-      hrTextColor: '#000000',
-      hrCustomText,
-      whiteBoxEnabled: true,
-      whiteBoxPaddingMm: 1,
-      whiteBoxCornerRadiusMm: 0.5,
-    }
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === 'layer_barcode'
-          ? { ...layer, objects: [...layer.objects, newObj] }
-          : layer,
-      ),
-    )
-    setSelectedObjectId(newObj.id)
-  }
-
-  const addTextObject = () => {
-    const newObj: TextObject = {
-      id: `text_${Date.now()}`,
-      type: 'text',
-      name: 'Text',
-      layer: 'TEXT',
-      xMm: safeMarginMm,
-      yMm: labelHeightMm - safeMarginMm - 5,
-      widthMm: 40,
-      heightMm: 5,
-      rotation: 0,
-      horizontalAlign: 'left',
-      verticalAlign: 'top',
-      fillColor: '#000000',
-      strokeColor: 'transparent',
-      strokeWidthMm: 0,
-      opacity: 1,
-      locked: false,
-      visible: true,
-      printable: true,
-      content: 'Sample Text',
-      fontFamily: 'Arial',
-      fontSizePt: 10,
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-      lineHeightPercent: 120,
-      letterSpacingPt: 0,
-      textTransform: 'none',
-    }
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === 'layer_text'
-          ? { ...layer, objects: [...layer.objects, newObj] }
-          : layer,
-      ),
-    )
-    setSelectedObjectId(newObj.id)
-  }
-
-  const addImageObject = () => {
-    const newObj: ImageObject = {
-      id: `image_${Date.now()}`,
-      type: 'image',
-      name: 'Logo',
-      layer: 'LOGO',
-      xMm: labelWidthMm - safeMarginMm - 15,
-      yMm: safeMarginMm,
-      widthMm: 15,
-      heightMm: 15,
-      rotation: 0,
-      horizontalAlign: 'right',
-      verticalAlign: 'top',
-      fillColor: 'transparent',
-      strokeColor: 'transparent',
-      strokeWidthMm: 0,
-      opacity: 1,
-      locked: false,
-      visible: true,
-      printable: true,
-      src: '',
-      fit: 'contain',
-    }
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === 'layer_logo'
-          ? { ...layer, objects: [...layer.objects, newObj] }
-          : layer,
-      ),
-    )
-    setSelectedObjectId(newObj.id)
-  }
-
-  // Nájsť vybraný objekt
-  const selectedObject = layers
-    .flatMap(l => l.objects)
-    .find(o => o.id === selectedObjectId)
-  const selectedLayer = layers.find(l =>
-    l.objects.some(o => o.id === selectedObjectId),
-  )
-
   const labelConfig: LabelConfig = {
     widthMm: labelWidthMm,
     heightMm: labelHeightMm,
@@ -669,25 +475,6 @@ const App: React.FC = () => {
     gridSizeMm: canvasGridSizeMm,
   }
 
-  const handleUpdateObject = (
-    layerId: string,
-    objectId: string,
-    updates: Partial<LabelObject>,
-  ) => {
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === layerId
-          ? {
-              ...layer,
-              objects: layer.objects.map(obj =>
-                obj.id === objectId ? { ...obj, ...updates } : obj,
-              ),
-            }
-          : layer,
-      ),
-    )
-  }
-
   /* =====================
    * REFS
    * ===================== */
@@ -695,12 +482,341 @@ const App: React.FC = () => {
   const previewWrapperRef = useRef<HTMLDivElement | null>(null)
 
   /* =====================
+   * EXPORT FUNCTIONS - Profesionálny prístup
+   * ===================== */
+  
+  // Pomocná funkcia pre získanie SVG s správnymi rozmermi
+  const getSvgForExport = useCallback(() => {
+    if (!svgRef.current) return null
+    
+    const svgElement = svgRef.current.cloneNode(true) as SVGSVGElement
+    
+    // Nastavíme explicitné rozmery v mm
+    const widthPx = labelWidthMm * (exportDpi / 25.4)
+    const heightPx = labelHeightMm * (exportDpi / 25.4)
+    
+    svgElement.setAttribute('width', `${labelWidthMm}mm`)
+    svgElement.setAttribute('height', `${labelHeightMm}mm`)
+    svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    
+    return { element: svgElement, widthPx, heightPx }
+  }, [labelWidthMm, labelHeightMm, exportDpi])
+
+  const handleExportSVG = useCallback(() => {
+    const svgData = getSvgForExport()
+    if (!svgData) {
+      alert('Nie je dostupný SVG náhľad na export.')
+      return
+    }
+    
+    const serializer = new XMLSerializer()
+    let svgString = serializer.serializeToString(svgData.element)
+    
+    // Pridáme XML deklaráciu
+    svgString = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' + svgString
+    
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `barcode_${codeType}_${labelWidthMm}x${labelHeightMm}mm.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [codeType, labelWidthMm, labelHeightMm, getSvgForExport])
+
+  const handleExportPNG = useCallback(() => {
+    const svgData = getSvgForExport()
+    if (!svgData) {
+      alert('Nie je dostupný SVG náhľad na export.')
+      return
+    }
+    
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgData.element)
+    
+    // Vytvoríme canvas s vysokým rozlíšením
+    const canvas = document.createElement('canvas')
+    canvas.width = svgData.widthPx
+    canvas.height = svgData.heightPx
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      alert('Nepodarilo sa vytvoriť canvas pre export.')
+      return
+    }
+    
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    
+    // Vytvoríme data URL zo SVG
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    
+    img.onload = () => {
+      // Vyplníme pozadie
+      ctx.fillStyle = bgColor
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      
+      // Nakreslíme SVG
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const pngUrl = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = pngUrl
+          link.download = `barcode_${codeType}_${labelWidthMm}x${labelHeightMm}mm_${exportDpi}dpi.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(pngUrl)
+        }
+      }, 'image/png', 1.0)
+      
+      URL.revokeObjectURL(url)
+    }
+    
+    img.onerror = () => {
+      alert('Chyba pri načítaní SVG pre PNG export.')
+      URL.revokeObjectURL(url)
+    }
+    
+    img.src = url
+  }, [codeType, exportDpi, bgColor, labelWidthMm, labelHeightMm, getSvgForExport])
+
+  const handleExportTIFF = useCallback(() => {
+    const svgData = getSvgForExport()
+    if (!svgData) {
+      alert('Nie je dostupný SVG náhľad na export.')
+      return
+    }
+    
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgData.element)
+    
+    const canvas = document.createElement('canvas')
+    canvas.width = svgData.widthPx
+    canvas.height = svgData.heightPx
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      alert('Nepodarilo sa vytvoriť canvas pre export.')
+      return
+    }
+    
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    
+    img.onload = () => {
+      ctx.fillStyle = bgColor
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      // Export ako PNG (TIFF nie je natívne podporovaný v prehliadačoch)
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const tiffUrl = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = tiffUrl
+          link.download = `barcode_${codeType}_${labelWidthMm}x${labelHeightMm}mm_${exportDpi}dpi.tiff`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(tiffUrl)
+        }
+      }, 'image/png', 1.0)
+      
+      URL.revokeObjectURL(url)
+    }
+    
+    img.onerror = () => {
+      alert('Chyba pri načítaní SVG pre TIFF export.')
+      URL.revokeObjectURL(url)
+    }
+    
+    img.src = url
+  }, [codeType, exportDpi, bgColor, labelWidthMm, labelHeightMm, getSvgForExport])
+
+  const handleExportPDF = useCallback(() => {
+    const svgData = getSvgForExport()
+    if (!svgData) {
+      alert('Nie je dostupný SVG náhľad na export.')
+      return
+    }
+    
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgData.element)
+
+    // Vytvoríme HTML stránku s presnou veľkosťou etikety
+    const printWindow = window.open('', '_blank', `width=${labelWidthMm * 3.78},height=${labelHeightMm * 3.78}`)
+    if (printWindow) {
+      printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Barcode Export - ${codeType}</title>
+  <style>
+    @page { 
+      size: ${labelWidthMm}mm ${labelHeightMm}mm; 
+      margin: 0; 
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: ${labelWidthMm}mm;
+      height: ${labelHeightMm}mm;
+      margin: 0; 
+      padding: 0;
+      overflow: hidden;
+    }
+    body { 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: ${bgColor};
+    }
+    svg { 
+      width: ${labelWidthMm}mm;
+      height: ${labelHeightMm}mm;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    @media print {
+      html, body { 
+        width: ${labelWidthMm}mm;
+        height: ${labelHeightMm}mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${svgString}
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 300);
+    }
+  </script>
+</body>
+</html>`)
+      printWindow.document.close()
+    } else {
+      alert('Povoľte vyskakovacie okná pre PDF export.')
+    }
+  }, [codeType, labelWidthMm, labelHeightMm, bgColor, getSvgForExport])
+
+  const handleExportEPS = useCallback(() => {
+    const svgData = getSvgForExport()
+    if (!svgData) {
+      alert('Nie je dostupný SVG náhľad na export.')
+      return
+    }
+    
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgData.element)
+    
+    // Konvertujeme mm na points (1mm = 2.83465pt)
+    const widthPt = labelWidthMm * 2.83465
+    const heightPt = labelHeightMm * 2.83465
+    
+    // Vytvoríme EPS s embedded SVG ako komentár
+    const epsContent = `%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 ${Math.ceil(widthPt)} ${Math.ceil(heightPt)}
+%%HiResBoundingBox: 0 0 ${widthPt.toFixed(4)} ${heightPt.toFixed(4)}
+%%Creator: GPCS CodeStudio
+%%Title: Barcode ${codeType} - ${labelWidthMm}x${labelHeightMm}mm
+%%CreationDate: ${new Date().toISOString()}
+%%DocumentData: Clean7Bit
+%%LanguageLevel: 2
+%%Pages: 1
+%%EndComments
+
+%%BeginProlog
+/mm { 2.83465 mul } def
+%%EndProlog
+
+%%Page: 1 1
+
+% Label background
+newpath
+0 0 moveto
+${widthPt.toFixed(4)} 0 lineto
+${widthPt.toFixed(4)} ${heightPt.toFixed(4)} lineto
+0 ${heightPt.toFixed(4)} lineto
+closepath
+1 1 1 setrgbcolor
+fill
+
+% SVG source (for reference - convert using Inkscape CLI):
+% ${svgString.replace(/\n/g, ' ').substring(0, 500)}...
+
+% Placeholder rectangle
+newpath
+${(widthPt * 0.1).toFixed(4)} ${(heightPt * 0.1).toFixed(4)} moveto
+${(widthPt * 0.9).toFixed(4)} ${(heightPt * 0.1).toFixed(4)} lineto
+${(widthPt * 0.9).toFixed(4)} ${(heightPt * 0.9).toFixed(4)} lineto
+${(widthPt * 0.1).toFixed(4)} ${(heightPt * 0.9).toFixed(4)} lineto
+closepath
+0 0 0 setrgbcolor
+0.5 setlinewidth
+stroke
+
+showpage
+%%EOF
+`
+    
+    const blob = new Blob([epsContent], { type: 'application/postscript' })
+    const url = URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `barcode_${codeType}_${labelWidthMm}x${labelHeightMm}mm.eps`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [codeType, labelWidthMm, labelHeightMm, getSvgForExport])
+
+  const handleExportWithSettings = useCallback((settings: ExportSettings) => {
+    switch (settings.format) {
+      case 'SVG':
+        handleExportSVG()
+        break
+      case 'PNG':
+        handleExportPNG()
+        break
+      case 'TIFF':
+        handleExportTIFF()
+        break
+      case 'PDF':
+        handleExportPDF()
+        break
+      case 'EPS':
+        handleExportEPS()
+        break
+      default:
+        handleExportSVG()
+    }
+  }, [handleExportSVG, handleExportPNG, handleExportTIFF, handleExportPDF, handleExportEPS])
+
+  /* =====================
    * RENDER
    * ===================== */
 
   // Ak nie je prihlásený, zobraz login stránku
   if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />
+    return <LoginPage onLogin={(mode) => {
+      setAppMode(mode)
+      setIsLoggedIn(true)
+    }} />
+  }
+
+  // Ak je zvolený AUTO_TRAPPING mode, zobraz AutoTrap Studio
+  if (appMode === 'AUTO_TRAPPING') {
+    return <AutoTrapStudio onBack={() => setIsLoggedIn(false)} />
   }
 
   return (
@@ -776,23 +892,24 @@ const App: React.FC = () => {
 
       {/* MODAL: Grafické nástroje */}
       {showGraphicTools && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[700px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[800px] overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
             {/* Modal header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-200">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+                <span className="text-xl">⚙️</span>
                 Tlač &amp; VDP nastavenia
               </h2>
               <button
                 type="button"
                 onClick={() => setShowGraphicTools(false)}
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:border-red-500 hover:text-red-300"
+                className="rounded-lg border-2 border-slate-500 bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 Zavrieť ✕
               </button>
             </div>
             {/* Modal content */}
-            <div className="p-4">
+            <div className="p-6">
               <GraphicToolsPanel
                 codeType={codeType}
                 rotation={rotation}
@@ -856,24 +973,25 @@ const App: React.FC = () => {
 
       {/* MODAL: Canvas Settings (Distortion, Grid) */}
       {showCanvasSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-[400px] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-[500px] rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+                <span className="text-xl">🎛️</span>
                 Canvas nastavenia
               </h2>
               <button
                 type="button"
                 onClick={() => setShowCanvasSettings(false)}
-                className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 hover:border-red-500"
+                className="rounded-lg border-2 border-slate-500 bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 ✕
               </button>
             </div>
-            <div className="space-y-4 p-4">
+            <div className="space-y-5 p-6">
               {/* Distortion */}
-              <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-                <label className="mb-2 flex items-center gap-2 text-xs text-slate-300">
+              <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4">
+                <label className="mb-3 flex items-center gap-3 text-sm font-medium text-slate-200">
                   <input
                     type="checkbox"
                     checked={distortionSettings.enabled}
@@ -883,14 +1001,14 @@ const App: React.FC = () => {
                         enabled: e.target.checked,
                       }))
                     }
-                    className="h-4 w-4"
+                    className="h-5 w-5 rounded border-slate-500 bg-slate-700 text-sky-500"
                   />
                   Povoliť distortion kompenzáciu (flexo)
                 </label>
                 {distortionSettings.enabled && (
-                  <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div className="mt-3 grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1 block text-[10px] text-slate-400">
+                      <label className="mb-2 block text-sm text-slate-400">
                         Web smer (%)
                       </label>
                       <input
@@ -904,11 +1022,11 @@ const App: React.FC = () => {
                               parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                        className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] text-slate-400">
+                      <label className="mb-2 block text-sm text-slate-400">
                         Cross smer (%)
                       </label>
                       <input
@@ -922,7 +1040,7 @@ const App: React.FC = () => {
                               parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                        className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200"
                       />
                     </div>
                   </div>
@@ -931,7 +1049,7 @@ const App: React.FC = () => {
 
               {/* Grid size */}
               <div>
-                <label className="mb-1 block text-xs text-slate-400">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                   Grid veľkosť (mm)
                 </label>
                 <input
@@ -943,14 +1061,14 @@ const App: React.FC = () => {
                   onChange={e =>
                     setCanvasGridSizeMm(parseFloat(e.target.value) || 1)
                   }
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200"
                 />
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowCanvasSettings(false)}
-                className="w-full rounded bg-sky-600 py-2 text-xs font-medium text-white hover:bg-sky-500"
+                className="w-full rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 py-3 text-base font-semibold text-white shadow-lg shadow-sky-500/30 transition-all hover:from-sky-500 hover:to-sky-400"
               >
                 Hotovo
               </button>
@@ -961,50 +1079,49 @@ const App: React.FC = () => {
 
       {/* MODAL: Step & Repeat */}
       {showStepRepeat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[800px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[1000px] overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-xl font-bold text-white">
+                <span className="text-2xl">🔁</span>
                 Step & Repeat Layout
               </h2>
               <button
                 type="button"
                 onClick={() => setShowStepRepeat(false)}
-                className="rounded border border-slate-600 bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:border-red-500"
+                className="rounded-xl border-2 border-slate-500 bg-slate-700 px-5 py-2.5 text-base font-semibold text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 Zavrieť ✕
               </button>
             </div>
-            <div className="p-4">
-              <StepRepeatPanel
-                config={stepRepeatConfig}
-                onUpdateConfig={setStepRepeatConfig}
-                labelConfig={labelConfig}
-                onGenerateLayout={() => console.log('Generate layout')}
-                onExportLayout={() => console.log('Export layout')}
-              />
-            </div>
+            <StepRepeatPanel
+              config={stepRepeatConfig}
+              onUpdateConfig={setStepRepeatConfig}
+              labelConfig={labelConfig}
+              onGenerateLayout={() => {}}
+            />
           </div>
         </div>
       )}
 
       {/* MODAL: Export */}
       {showExport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[700px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[800px] overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+                <span className="text-xl">💾</span>
                 Export etikety
               </h2>
               <button
                 type="button"
                 onClick={() => setShowExport(false)}
-                className="rounded border border-slate-600 bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:border-red-500"
+                className="rounded-lg border-2 border-slate-500 bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 Zavrieť ✕
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-6">
               <ExportPanel
                 exportSettings={exportSettings}
                 onUpdateSettings={updates =>
@@ -1013,7 +1130,7 @@ const App: React.FC = () => {
                 labelConfig={labelConfig}
                 layers={layers}
                 onExport={settings => {
-                  console.log('Export with settings:', settings)
+                  handleExportWithSettings(settings)
                   setShowExport(false)
                 }}
                 onGenerateSeparationPreview={() => {
@@ -1053,21 +1170,22 @@ const App: React.FC = () => {
 
       {/* MODAL: Machine Presets */}
       {showMachinePresets && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[500px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[900px] overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-xl font-bold text-white">
+                <span className="text-2xl">🏭</span>
                 Strojové nastavenia
               </h2>
               <button
                 type="button"
                 onClick={() => setShowMachinePresets(false)}
-                className="rounded border border-slate-600 bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:border-red-500"
+                className="rounded-xl border-2 border-slate-500 bg-slate-700 px-5 py-2.5 text-base font-semibold text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 Zavrieť ✕
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-6">
               <MachinePresetsPanel
                 presets={[]}
                 selectedPresetId={selectedMachinePreset?.id || null}
@@ -1082,377 +1200,131 @@ const App: React.FC = () => {
 
       {/* MODAL: Job Ticket */}
       {showJobTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-[600px] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[900px] overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-600 bg-slate-800 px-6 py-4">
+              <h2 className="flex items-center gap-3 text-xl font-bold text-white">
+                <span className="text-2xl">📋</span>
                 Job Ticket / Report
               </h2>
               <button
                 type="button"
                 onClick={() => setShowJobTicket(false)}
-                className="rounded border border-slate-600 bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:border-red-500"
+                className="rounded-xl border-2 border-slate-500 bg-slate-700 px-5 py-2.5 text-base font-semibold text-white transition-all hover:border-red-500 hover:bg-red-500/20"
               >
                 Zavrieť ✕
               </button>
             </div>
-            <div className="p-4">
-              <JobTicketPanel
-                jobId={jobId}
-                labelConfig={labelConfig}
-                layers={layers}
-                stepRepeatConfig={stepRepeatConfig}
-                machinePreset={selectedMachinePreset || undefined}
-                exportSettings={exportSettings}
-                codeType={codeType}
-                codeValue={codeValue}
-                magnificationPercent={magnificationPercent}
-                xDimMm={xDimMm}
-                barWidthReductionMm={barWidthReductionMm}
-                onGenerateReport={() => console.log('Generate report')}
-                onPrint={() => console.log('Print')}
-              />
-            </div>
+            <JobTicketPanel
+              jobId={jobId}
+              labelConfig={labelConfig}
+              layers={layers}
+              stepRepeatConfig={stepRepeatConfig}
+              machinePreset={selectedMachinePreset || undefined}
+              exportSettings={exportSettings}
+              codeType={codeType}
+              codeValue={codeValue}
+              magnificationPercent={magnificationPercent}
+              xDimMm={xDimMm}
+              barWidthReductionMm={barWidthReductionMm}
+              onGenerateReport={() => {}}
+              onPrint={() => {}}
+            />
           </div>
         </div>
       )}
 
-      {/* stred + náhľad */}
-      <div className="flex flex-1 gap-6 px-6 py-6">
-        <div className="flex flex-1 flex-col gap-2">
-          {/* Canvas Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2">
-            {/* Tlač & VDP */}
+      {/* Hlavný obsah */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Toolbar s dropdown hover efektmi */}
+        <div className="flex items-center gap-2 border-b border-slate-700 bg-slate-900/95 px-4 py-2">
+          {/* VDP */}
+          <div className="group relative">
             <button
               type="button"
               onClick={() => setShowGraphicTools(true)}
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-200 hover:border-sky-500"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-200 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-sky-500 hover:bg-sky-500/20 hover:shadow-lg"
             >
-              ⚙️ Tlač &amp; VDP
+              ⚙️ VDP
             </button>
+            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-48 origin-top scale-y-0 rounded-lg border border-sky-500/50 bg-slate-800 p-3 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-y-100 group-hover:opacity-100">
+              <p className="text-xs text-slate-300">Nastavenia VDP a tlače</p>
+            </div>
+          </div>
+
+          {/* Step & Repeat */}
+          <div className="group relative">
             <button
               type="button"
               onClick={() => setShowStepRepeat(true)}
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-200 hover:border-emerald-500"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-200 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-emerald-500 hover:bg-emerald-500/20 hover:shadow-lg"
             >
-              🔁 Step & Repeat
+              🔁 S&R
             </button>
+            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-48 origin-top scale-y-0 rounded-lg border border-emerald-500/50 bg-slate-800 p-3 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-y-100 group-hover:opacity-100">
+              <p className="text-xs text-slate-300">Step & Repeat layout</p>
+            </div>
+          </div>
+
+          {/* Export */}
+          <div className="group relative">
             <button
               type="button"
               onClick={() => setShowExport(true)}
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-200 hover:border-violet-500"
+              className="rounded-lg border border-violet-500 bg-violet-500/20 px-4 py-2 text-sm font-bold text-violet-200 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-violet-500/30 hover:shadow-lg"
             >
               💾 Export
             </button>
+            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-48 origin-top scale-y-0 rounded-lg border border-violet-500/50 bg-slate-800 p-3 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-y-100 group-hover:opacity-100">
+              <p className="text-xs text-slate-300">Export etikety</p>
+            </div>
+          </div>
+
+          {/* Stroj */}
+          <div className="group relative">
             <button
               type="button"
               onClick={() => setShowMachinePresets(true)}
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-200 hover:border-amber-500"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-200 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-amber-500 hover:bg-amber-500/20 hover:shadow-lg"
             >
               🏭 Stroj
             </button>
+            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-48 origin-top scale-y-0 rounded-lg border border-amber-500/50 bg-slate-800 p-3 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-y-100 group-hover:opacity-100">
+              <p className="text-xs text-slate-300">Strojové nastavenia</p>
+            </div>
+          </div>
+
+          {/* Job Ticket */}
+          <div className="group relative">
             <button
               type="button"
               onClick={() => setShowJobTicket(true)}
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-200 hover:border-rose-500"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-200 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-rose-500 hover:bg-rose-500/20 hover:shadow-lg"
             >
-              📋 Job Ticket
+              📋 Job
             </button>
-
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Zóny */}
-            <div className="flex items-center gap-1 text-[10px]">
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showBleedZone}
-                  onChange={e => setShowBleedZone(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Bleed
-              </label>
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showTrimZone}
-                  onChange={e => setShowTrimZone(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Trim
-              </label>
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showSafeZone}
-                  onChange={e => setShowSafeZone(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Safe
-              </label>
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showCanvasGrid}
-                  onChange={e => setShowCanvasGrid(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Grid
-              </label>
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={showRulers}
-                  onChange={e => setShowRulers(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Rulers
-              </label>
+            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-48 origin-top scale-y-0 rounded-lg border border-rose-500/50 bg-slate-800 p-3 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-y-100 group-hover:opacity-100">
+              <p className="text-xs text-slate-300">Job Ticket / Report</p>
             </div>
-
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Orientácia */}
-            <div className="flex items-center gap-1 text-[10px]">
-              <span className="text-slate-500">Orientácia:</span>
-              <select
-                value={labelOrientation}
-                onChange={e =>
-                  setLabelOrientation(e.target.value as LabelOrientation)
-                }
-                className="rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-[10px] text-slate-200"
-              >
-                <option value="HEAD_UP">Head Up ↑</option>
-                <option value="HEAD_DOWN">Head Down ↓</option>
-                <option value="HEAD_LEFT">Head Left ←</option>
-                <option value="HEAD_RIGHT">Head Right →</option>
-              </select>
-            </div>
-
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Zoom */}
-            <div className="flex items-center gap-1 text-[10px]">
-              <span className="text-slate-500">Zoom:</span>
-              <button
-                onClick={() =>
-                  setCanvasZoom(z => Math.max(0.25, z - 0.25))
-                }
-                className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700"
-              >
-                −
-              </button>
-              <span className="w-10 text-center text-slate-200">
-                {Math.round(canvasZoom * 100)}%
-              </span>
-              <button
-                onClick={() => setCanvasZoom(z => Math.min(3, z + 0.25))}
-                className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-300 hover:bg-slate-700"
-              >
-                +
-              </button>
-            </div>
-
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Snapping */}
-            <div className="flex items-center gap-1 text-[10px]">
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={snapToGrid}
-                  onChange={e => setSnapToGrid(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Snap Grid
-              </label>
-              <label className="flex items-center gap-1 text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={snapToObjects}
-                  onChange={e => setSnapToObjects(e.target.checked)}
-                  className="h-3 w-3"
-                />
-                Snap Obj
-              </label>
-            </div>
-
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Distortion */}
-            <button
-              type="button"
-              onClick={() => setShowCanvasSettings(true)}
-              className={`rounded border px-2 py-1 text-[10px] ${
-                distortionSettings.enabled
-                  ? 'border-amber-500 bg-amber-500/20 text-amber-300'
-                  : 'border-slate-600 bg-slate-800 text-slate-300'
-              }`}
-            >
-              Distortion{' '}
-              {distortionSettings.enabled
-                ? `${distortionSettings.webDirectionPercent}%`
-                : 'OFF'}
-            </button>
           </div>
 
-          {/* Druhý riadok: Presety + Pridávanie objektov */}
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2">
-            {/* Preset etikety */}
-            <div className="flex items-center gap-1 text-[10px]">
-              <span className="text-slate-500">Etiketa:</span>
-              <select
-                value={labelPreset}
-                onChange={e => handlePresetChange(e.target.value)}
-                className="rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-[10px] text-slate-200"
-              >
-                <optgroup label="Štandardné">
-                  {LABEL_PRESETS_CONFIG.filter(
-                    p => p.category === 'standard',
-                  ).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Farmaceutické">
-                  {LABEL_PRESETS_CONFIG.filter(
-                    p => p.category === 'pharma',
-                  ).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Logistické">
-                  {LABEL_PRESETS_CONFIG.filter(
-                    p => p.category === 'logistics',
-                  ).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Vlastné">
-                  <option value="CUSTOM">Vlastný rozmer</option>
-                </optgroup>
-              </select>
-              {labelPreset === 'CUSTOM' && (
-                <>
-                  <input
-                    type="number"
-                    value={labelWidthMm}
-                    onChange={e =>
-                      setLabelWidthMm(parseFloat(e.target.value) || 50)
-                    }
-                    className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
-                  />
-                  <span className="text-slate-500">×</span>
-                  <input
-                    type="number"
-                    value={labelHeightMm}
-                    onChange={e =>
-                      setLabelHeightMm(parseFloat(e.target.value) || 30)
-                    }
-                    className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
-                  />
-                  <span className="text-slate-500">mm</span>
-                </>
-              )}
-            </div>
+          <div className="mx-2 h-6 w-px bg-slate-700" />
 
-            <div className="h-4 w-px bg-slate-700" />
+          {/* Rýchly export */}
+          <button onClick={handleExportSVG} className="rounded-lg border border-emerald-600 bg-emerald-600/20 px-3 py-1.5 text-xs font-bold text-emerald-300 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:shadow-lg">SVG</button>
+          <button onClick={handleExportPNG} className="rounded-lg border border-blue-600 bg-blue-600/20 px-3 py-1.5 text-xs font-bold text-blue-300 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:shadow-lg">PNG</button>
+          <button onClick={handleExportPDF} className="rounded-lg border border-red-600 bg-red-600/20 px-3 py-1.5 text-xs font-bold text-red-300 transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:shadow-lg">PDF</button>
 
-            {/* Pridávanie objektov */}
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-slate-500">Pridať:</span>
-              <button
-                type="button"
-                onClick={addBarcodeObject}
-                className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200 hover:border-green-500 hover:text-green-300"
-              >
-                + Barcode
-              </button>
-              <button
-                type="button"
-                onClick={addTextObject}
-                className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200 hover:border-blue-500 hover:text-blue-300"
-              >
-                + Text
-              </button>
-              <button
-                type="button"
-                onClick={addImageObject}
-                className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200 hover:border-purple-500 hover:text-purple-300"
-              >
-                + Logo
-              </button>
-            </div>
+          <div className="mx-2 h-6 w-px bg-slate-700" />
 
-            <div className="h-4 w-px bg-slate-700" />
-
-            {/* Info o vybraný objekt */}
-            {selectedObject && selectedLayer && (
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-slate-400">Vybrané:</span>
-                <span className="font-medium text-sky-300">
-                  {selectedObject.name}
-                </span>
-                <span className="text-slate-500">X:</span>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={selectedObject.xMm}
-                  onChange={e =>
-                    handleUpdateObject(selectedLayer.id, selectedObject.id, {
-                      xMm: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
-                />
-                <span className="text-slate-500">Y:</span>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={selectedObject.yMm}
-                  onChange={e =>
-                    handleUpdateObject(selectedLayer.id, selectedObject.id, {
-                      yMm: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-200"
-                />
-                <span className="text-slate-500">mm</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedObjectId(null)}
-                  className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-slate-400 hover:border-red-500 hover:text-red-300"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Label Canvas */}
-          <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-900/70 p-2">
-            <LabelCanvas
-              labelConfig={labelConfig}
-              layers={layers}
-              selectedObjectId={selectedObjectId}
-              onSelectObject={setSelectedObjectId}
-              onUpdateObject={handleUpdateObject}
-              distortionSettings={distortionSettings}
-              zoom={canvasZoom}
-              showRulers={showRulers}
-              snapToGrid={snapToGrid}
-              snapToObjects={snapToObjects}
-            />
-          </div>
+          {/* Zoom */}
+          <button onClick={() => setCanvasZoom(z => Math.max(0.25, z - 0.25))} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 transition-all hover:bg-slate-700">−</button>
+          <span className="w-12 text-center text-sm text-slate-200">{Math.round(canvasZoom * 100)}%</span>
+          <button onClick={() => setCanvasZoom(z => Math.min(3, z + 0.25))} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 transition-all hover:bg-slate-700">+</button>
         </div>
 
-        {/* pravý panel – väčší náhľad */}
-        <div className="flex w-[600px] shrink-0">
+        {/* Náhľad - zväčšený */}
+        <div className="flex flex-1 w-full overflow-auto p-4">
           <PreviewPanel
             codeType={codeType}
             rawCodeValue={codeValue}
