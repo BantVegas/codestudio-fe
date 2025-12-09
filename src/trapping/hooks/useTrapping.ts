@@ -7,11 +7,13 @@ import { useState, useCallback, useMemo } from 'react'
 import type {
   TrapSettings,
   TrapLayer,
+  TrapObject,
   TrapWarning,
   TrappingDocument,
   ColorAdjacencyMap,
   ViewMode,
   ExportOptions,
+  TrapTag,
 } from '../types/trappingTypes'
 import { DEFAULT_TRAP_SETTINGS, DEFAULT_EXPORT_OPTIONS } from '../types/trappingTypes'
 import { buildColorAdjacencyMap, getTrapRequiredAdjacencies } from '../core/ColorAnalyzer'
@@ -28,6 +30,20 @@ export interface UseTrappingResult {
   warnings: TrapWarning[]
   isProcessing: boolean
   viewMode: ViewMode
+  
+  // Trap Selection
+  selectedTrapId: string | null
+  hoveredTrapId: string | null
+  selectedTrap: TrapObject | null
+  selectTrap: (trapId: string | null) => void
+  hoverTrap: (trapId: string | null) => void
+  
+  // TrapTags
+  trapTags: TrapTag[]
+  addTrapTag: (tag: Omit<TrapTag, 'id' | 'createdAt' | 'modifiedAt'>) => void
+  updateTrapTag: (id: string, updates: Partial<TrapTag>) => void
+  deleteTrapTag: (id: string) => void
+  clearTrapTags: () => void
   
   // Actions
   updateSettings: (settings: Partial<TrapSettings>) => void
@@ -52,9 +68,72 @@ export function useTrapping(): UseTrappingResult {
   const [isProcessing, setIsProcessing] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('NORMAL')
   const [qcReport, setQcReport] = useState<string | null>(null)
+  
+  // Trap Selection state
+  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [hoveredTrapId, setHoveredTrapId] = useState<string | null>(null)
+  
+  // TrapTags state
+  const [trapTags, setTrapTags] = useState<TrapTag[]>([])
 
   // Rule engine instance
   const ruleEngine = useMemo(() => new TrapRuleEngine(settings), [settings])
+
+  // Get selected trap object
+  const selectedTrap = useMemo((): TrapObject | null => {
+    if (!selectedTrapId || !trapLayer) return null
+    return trapLayer.traps.find(t => t.id === selectedTrapId) || null
+  }, [selectedTrapId, trapLayer])
+
+  // Trap selection functions
+  const selectTrap = useCallback((trapId: string | null) => {
+    setSelectedTrapId(trapId)
+    // Log trap info when selected
+    if (trapId && trapLayer) {
+      const trap = trapLayer.traps.find(t => t.id === trapId)
+      if (trap) {
+        console.log('Selected trap:', {
+          id: trap.id,
+          direction: trap.decision.direction,
+          width: trap.widthMm,
+          sourceRegion: trap.sourceRegionId,
+          targetRegion: trap.targetRegionId,
+          style: trap.style
+        })
+      }
+    }
+  }, [trapLayer])
+
+  const hoverTrap = useCallback((trapId: string | null) => {
+    setHoveredTrapId(trapId)
+  }, [])
+
+  // TrapTag management
+  const addTrapTag = useCallback((tag: Omit<TrapTag, 'id' | 'createdAt' | 'modifiedAt'>) => {
+    const newTag: TrapTag = {
+      ...tag,
+      id: `trap_tag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date(),
+      modifiedAt: new Date(),
+    }
+    setTrapTags(prev => [...prev, newTag])
+  }, [])
+
+  const updateTrapTag = useCallback((id: string, updates: Partial<TrapTag>) => {
+    setTrapTags(prev => prev.map(tag => 
+      tag.id === id 
+        ? { ...tag, ...updates, modifiedAt: new Date() }
+        : tag
+    ))
+  }, [])
+
+  const deleteTrapTag = useCallback((id: string) => {
+    setTrapTags(prev => prev.filter(tag => tag.id !== id))
+  }, [])
+
+  const clearTrapTags = useCallback(() => {
+    setTrapTags([])
+  }, [])
 
   // Update settings
   const updateSettings = useCallback((newSettings: Partial<TrapSettings>) => {
@@ -111,12 +190,13 @@ export function useTrapping(): UseTrappingResult {
         allWarnings.push(...decision.warnings)
       }
 
-      // Step 4: Generate trap geometry
+      // Step 4: Generate trap geometry (with TrapTags support)
       const layer = buildTrapLayer(
         document.id,
         decisions,
         adjMap.regions,
-        settings
+        settings,
+        trapTags  // Pass TrapTags for selective trapping
       )
 
       setTrapLayer(layer)
@@ -135,7 +215,7 @@ export function useTrapping(): UseTrappingResult {
     } finally {
       setIsProcessing(false)
     }
-  }, [settings, ruleEngine])
+  }, [settings, ruleEngine, trapTags])
 
   // Clear traps
   const clearTraps = useCallback(() => {
@@ -196,6 +276,19 @@ export function useTrapping(): UseTrappingResult {
     warnings,
     isProcessing,
     viewMode,
+    // Trap Selection
+    selectedTrapId,
+    hoveredTrapId,
+    selectedTrap,
+    selectTrap,
+    hoverTrap,
+    // TrapTags
+    trapTags,
+    addTrapTag,
+    updateTrapTag,
+    deleteTrapTag,
+    clearTrapTags,
+    // Actions
     updateSettings,
     generateTraps,
     clearTraps,

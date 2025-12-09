@@ -680,14 +680,24 @@ function mergeTraps(traps: TrapObject[]): TrapObject {
 // TRAP LAYER BUILDER
 // ============================================
 
+import { 
+  resolveTrapTag, 
+  applyTrapTagDirection, 
+  applyTrapTagWidth,
+  shouldTrapObject 
+} from './TrapRuleEngine'
+import type { TrapTag } from '../types/trappingTypes'
+
 /**
  * Build complete trap layer from decisions
+ * Now supports TrapTags for selective trapping
  */
 export function buildTrapLayer(
   documentId: string,
   decisions: TrapDecision[],
   regions: Map<string, ColorRegion>,
-  settings: TrapSettings
+  settings: TrapSettings,
+  trapTags: TrapTag[] = []
 ): TrapLayer {
   const startTime = Date.now()
   const traps: TrapObject[] = []
@@ -700,8 +710,45 @@ export function buildTrapLayer(
 
     if (!regionA || !regionB) continue
 
-    const trap = generateTrap(regionA, regionB, decision, settings)
+    // Check TrapTags for both regions
+    const tagA = resolveTrapTag(decision.regionAId, trapTags)
+    const tagB = resolveTrapTag(decision.regionBId, trapTags)
+    
+    // Skip if either region has NEVER mode
+    if (!shouldTrapObject(decision.regionAId, trapTags) || 
+        !shouldTrapObject(decision.regionBId, trapTags)) {
+      continue
+    }
+    
+    // Apply TrapTag overrides to decision
+    let modifiedDecision = { ...decision }
+    
+    // Apply direction override from TrapTag (prefer tagA if both exist)
+    if (tagA) {
+      modifiedDecision.direction = applyTrapTagDirection(tagA, decision.direction)
+    } else if (tagB) {
+      // Reverse direction for tagB
+      const reversedDir = decision.direction === 'SPREAD' ? 'CHOKE' : 
+                          decision.direction === 'CHOKE' ? 'SPREAD' : decision.direction
+      modifiedDecision.direction = applyTrapTagDirection(tagB, reversedDir)
+    }
+    
+    // Apply width override from TrapTag
+    const customWidth = applyTrapTagWidth(tagA, 0) || applyTrapTagWidth(tagB, 0)
+    if (customWidth > 0) {
+      modifiedDecision.widthMm = customWidth
+    }
+
+    const trap = generateTrap(regionA, regionB, modifiedDecision, settings)
     if (trap) {
+      // Add TrapTag info to trap metadata
+      if (tagA || tagB) {
+        trap.metadata = {
+          ...trap.metadata,
+          trapTagApplied: true,
+          trapTagId: tagA?.id || tagB?.id
+        }
+      }
       traps.push(trap)
     }
   }

@@ -10,13 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/three": "^0.181.0",
     "bwip-js": "^4.8.0",
+    "color-space": "^2.3.2",
+    "delta-e": "^0.0.8",
     "jsbarcode": "^3.12.1",
     "jspdf": "^3.0.4",
+    "paper": "^0.12.18",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.449",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "three": "^0.181.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

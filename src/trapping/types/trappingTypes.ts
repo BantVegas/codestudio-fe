@@ -358,6 +358,13 @@ export interface TrapObject {
   // Metadata
   decision: TrapDecision
   generatedAt: Date
+  
+  // Optional metadata for TrapTags and other info
+  metadata?: {
+    trapTagApplied?: boolean
+    trapTagId?: string
+    [key: string]: unknown
+  }
 }
 
 export interface TrapLayer {

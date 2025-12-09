@@ -11,6 +11,10 @@ import type {
   PrintingTechnology,
   TrapWarning,
   ViewMode,
+  TrapTag,
+  TrapTagMode,
+  TrapTagDirection,
+  TrapObject,
 } from '../types/trappingTypes'
 import { DEFAULT_TRAP_SETTINGS } from '../types/trappingTypes'
 
@@ -24,6 +28,15 @@ interface TrappingPanelProps {
   trapCount: number
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  // Trap Selection props
+  selectedTrap?: TrapObject | null
+  onDeselectTrap?: () => void
+  // Trap Tags props
+  trapTags?: TrapTag[]
+  onTrapTagAdd?: (tag: Omit<TrapTag, 'id' | 'createdAt' | 'modifiedAt'>) => void
+  onTrapTagUpdate?: (id: string, tag: Partial<TrapTag>) => void
+  onTrapTagDelete?: (id: string) => void
+  selectedObjectId?: string | null
 }
 
 export const TrappingPanel: React.FC<TrappingPanelProps> = ({
@@ -36,8 +49,21 @@ export const TrappingPanel: React.FC<TrappingPanelProps> = ({
   trapCount,
   viewMode,
   onViewModeChange,
+  selectedTrap,
+  onDeselectTrap,
+  trapTags = [],
+  onTrapTagAdd,
+  onTrapTagUpdate,
+  onTrapTagDelete,
+  selectedObjectId,
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>('general')
+  
+  // Trap Tag editing state
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
+  const [newTagMode, setNewTagMode] = useState<TrapTagMode>('AUTO')
+  const [newTagDirection, setNewTagDirection] = useState<TrapTagDirection>('AUTO')
+  const [newTagDistance, setNewTagDistance] = useState<number | undefined>(undefined)
 
   const updateSetting = useCallback(<K extends keyof TrapSettings>(
     key: K,
@@ -119,6 +145,61 @@ export const TrappingPanel: React.FC<TrappingPanelProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Selected Trap Info */}
+        {selectedTrap && (
+          <div className="p-4 rounded-lg bg-pink-500/10 border border-pink-500/30">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-pink-300">Vybraný Trap</h4>
+              {onDeselectTrap && (
+                <button
+                  onClick={onDeselectTrap}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  ✕ Zrušiť výber
+                </button>
+              )}
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">ID:</span>
+                <span className="text-slate-300 font-mono">{selectedTrap.id.slice(0, 16)}...</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Smer:</span>
+                <span className={`font-medium ${
+                  selectedTrap.decision.direction === 'SPREAD' ? 'text-cyan-400' :
+                  selectedTrap.decision.direction === 'CHOKE' ? 'text-pink-400' :
+                  selectedTrap.decision.direction === 'CENTERLINE' ? 'text-purple-400' :
+                  'text-slate-400'
+                }`}>
+                  {selectedTrap.decision.direction}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Šírka:</span>
+                <span className="text-slate-300">{selectedTrap.widthMm.toFixed(3)} mm</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Štýl:</span>
+                <span className="text-slate-300">{selectedTrap.style}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Source:</span>
+                <span className="text-slate-300 font-mono text-[10px]">{selectedTrap.sourceRegionId.slice(0, 12)}...</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Target:</span>
+                <span className="text-slate-300 font-mono text-[10px]">{selectedTrap.targetRegionId.slice(0, 12)}...</span>
+              </div>
+              {selectedTrap.metadata?.trapTagApplied && (
+                <div className="mt-2 pt-2 border-t border-pink-500/30">
+                  <span className="text-pink-300 text-[10px]">🏷️ TrapTag aplikovaný</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* General Settings Section */}
         <CollapsibleSection
@@ -358,6 +439,164 @@ export const TrappingPanel: React.FC<TrappingPanelProps> = ({
               />
             </div>
           )}
+        </CollapsibleSection>
+
+        {/* Trap Tags Section */}
+        <CollapsibleSection
+          title={`Trap Tags (${trapTags.length})`}
+          isExpanded={expandedSection === 'traptags'}
+          onToggle={() => toggleSection('traptags')}
+        >
+          <div className="space-y-3">
+            {/* Info */}
+            <p className="text-xs text-slate-400">
+              Trap Tags umožňujú selektívne ovládať trapping pre jednotlivé objekty.
+            </p>
+
+            {/* Add new tag for selected object */}
+            {selectedObjectId && onTrapTagAdd && (
+              <div className="p-3 rounded-lg bg-pink-500/10 border border-pink-500/30">
+                <div className="text-xs text-pink-300 mb-2">
+                  Vybraný objekt: <span className="font-mono">{selectedObjectId.slice(0, 12)}...</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {/* Mode */}
+                  <div>
+                    <label className="text-xs text-slate-400">Trap Mode</label>
+                    <div className="grid grid-cols-3 gap-1 mt-1">
+                      {(['AUTO', 'ALWAYS', 'NEVER'] as TrapTagMode[]).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setNewTagMode(mode)}
+                          className={`px-2 py-1 text-xs rounded ${
+                            newTagMode === mode
+                              ? 'bg-pink-500 text-white'
+                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Direction */}
+                  <div>
+                    <label className="text-xs text-slate-400">Smer</label>
+                    <div className="grid grid-cols-4 gap-1 mt-1">
+                      {(['AUTO', 'IN', 'OUT', 'CENTERLINE'] as TrapTagDirection[]).map(dir => (
+                        <button
+                          key={dir}
+                          onClick={() => setNewTagDirection(dir)}
+                          className={`px-2 py-1 text-xs rounded ${
+                            newTagDirection === dir
+                              ? 'bg-pink-500 text-white'
+                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          {dir === 'CENTERLINE' ? 'CTR' : dir}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom distance */}
+                  <div>
+                    <label className="text-xs text-slate-400">Vlastná vzdialenosť (mm)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={newTagDistance || ''}
+                      onChange={(e) => setNewTagDistance(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      placeholder="Auto"
+                      className="w-full mt-1 px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded focus:border-pink-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Add button */}
+                  <button
+                    onClick={() => {
+                      onTrapTagAdd({
+                        objectId: selectedObjectId,
+                        trappingMode: newTagMode,
+                        trappingDirection: newTagDirection,
+                        customDistanceMm: newTagDistance,
+                        reverseMode: 'AUTO',
+                        reverseDirection: 'AUTO',
+                      })
+                      setNewTagMode('AUTO')
+                      setNewTagDirection('AUTO')
+                      setNewTagDistance(undefined)
+                    }}
+                    className="w-full py-2 text-xs bg-pink-500 hover:bg-pink-400 text-white rounded transition-colors"
+                  >
+                    + Pridať Trap Tag
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!selectedObjectId && (
+              <div className="p-3 rounded-lg bg-slate-800 text-center">
+                <span className="text-xs text-slate-500">
+                  Vyberte objekt pre pridanie Trap Tag
+                </span>
+              </div>
+            )}
+
+            {/* Existing tags list */}
+            {trapTags.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {trapTags.map(tag => (
+                  <div
+                    key={tag.id}
+                    className="p-2 rounded-lg bg-slate-800 border border-slate-700"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-slate-400">
+                        {tag.objectId.slice(0, 12)}...
+                      </span>
+                      {onTrapTagDelete && (
+                        <button
+                          onClick={() => onTrapTagDelete(tag.id)}
+                          className="text-red-400 hover:text-red-300 text-xs"
+                          title="Odstrániť tag"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <span className={`px-1.5 py-0.5 rounded ${
+                        tag.trappingMode === 'ALWAYS' ? 'bg-green-500/20 text-green-300' :
+                        tag.trappingMode === 'NEVER' ? 'bg-red-500/20 text-red-300' :
+                        'bg-blue-500/20 text-blue-300'
+                      }`}>
+                        {tag.trappingMode}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+                        {tag.trappingDirection}
+                      </span>
+                      {tag.customDistanceMm && (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                          {tag.customDistanceMm}mm
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {trapTags.length === 0 && !selectedObjectId && (
+              <div className="text-xs text-slate-500 text-center py-2">
+                Žiadne Trap Tags
+              </div>
+            )}
+          </div>
         </CollapsibleSection>
 
         {/* Warnings Section */}

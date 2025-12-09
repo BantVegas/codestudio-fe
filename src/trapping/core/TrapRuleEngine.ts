@@ -8,6 +8,7 @@
  * - Centerline trap (equal optical weight)
  * - Chroma-based priority
  * - Special cases (metallic, white, fluorescent)
+ * - TrapTag support for selective trapping
  */
 
 import type {
@@ -24,7 +25,85 @@ import type {
   TrapSettings,
   RiskFactors,
   PrintingTechnology,
+  TrapTag,
+  TrapTagMode,
+  TrapTagDirection,
 } from '../types/trappingTypes'
+
+// ============================================
+// TRAP TAG RESOLUTION
+// ============================================
+
+/**
+ * Check if object has a TrapTag and resolve trapping behavior
+ */
+export function resolveTrapTag(
+  objectId: string,
+  trapTags: TrapTag[]
+): TrapTag | null {
+  return trapTags.find(tag => tag.objectId === objectId) || null
+}
+
+/**
+ * Apply TrapTag override to trap direction
+ */
+export function applyTrapTagDirection(
+  tag: TrapTag,
+  defaultDirection: TrapDirection
+): TrapDirection {
+  // Check if trapping is disabled for this object
+  if (tag.trappingMode === 'NEVER') {
+    return 'NONE'
+  }
+  
+  // If AUTO, use default direction
+  if (tag.trappingDirection === 'AUTO') {
+    return defaultDirection
+  }
+  
+  // Map TrapTagDirection to TrapDirection
+  switch (tag.trappingDirection) {
+    case 'IN':
+      return 'CHOKE'
+    case 'OUT':
+      return 'SPREAD'
+    case 'CENTERLINE':
+      return 'CENTERLINE'
+    default:
+      return defaultDirection
+  }
+}
+
+/**
+ * Apply TrapTag override to trap width
+ */
+export function applyTrapTagWidth(
+  tag: TrapTag | null,
+  defaultWidth: number
+): number {
+  if (!tag) return defaultWidth
+  
+  // Use custom distance if specified
+  if (tag.customDistanceMm !== undefined && tag.customDistanceMm > 0) {
+    return tag.customDistanceMm
+  }
+  
+  return defaultWidth
+}
+
+/**
+ * Check if object should be trapped based on TrapTag
+ */
+export function shouldTrapObject(
+  objectId: string,
+  trapTags: TrapTag[]
+): boolean {
+  const tag = resolveTrapTag(objectId, trapTags)
+  
+  if (!tag) return true // No tag = use default behavior
+  
+  return tag.trappingMode !== 'NEVER'
+}
 
 // ============================================
 // COLOR PRIORITY CALCULATION

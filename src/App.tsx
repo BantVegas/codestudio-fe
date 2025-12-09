@@ -17,6 +17,7 @@ import { MachinePresetsPanel } from './components/MachinePresetsPanel/MachinePre
 import { JobTicketPanel } from './components/JobTicketPanel/JobTicketPanel'
 import { LoginPage, type AppMode } from './components/LoginPage/LoginPage'
 import { AutoTrapStudio } from './components/AutoTrapStudio/AutoTrapStudio'
+import { StructuralStudio } from './components/StructuralStudio/StructuralStudio'
 
 import type {
   CodeType,
@@ -822,6 +823,11 @@ showpage
   // Ak je zvolený AUTO_TRAPPING mode, zobraz AutoTrap Studio
   if (appMode === 'AUTO_TRAPPING') {
     return <AutoTrapStudio onBack={() => setIsLoggedIn(false)} />
+  }
+
+  // Ak je zvolený STRUCTURAL_STUDIO mode, zobraz Structural Studio
+  if (appMode === 'STRUCTURAL_STUDIO') {
+    return <StructuralStudio onBack={() => setIsLoggedIn(false)} />
   }
 
   return (

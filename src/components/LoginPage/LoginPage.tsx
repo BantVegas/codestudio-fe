@@ -1,7 +1,7 @@
 // src/components/LoginPage/LoginPage.tsx
 import React, { useState } from 'react'
 
-export type AppMode = 'CODE_GENERATOR' | 'AUTO_TRAPPING'
+export type AppMode = 'CODE_GENERATOR' | 'AUTO_TRAPPING' | 'STRUCTURAL_STUDIO'
 
 interface LoginPageProps {
   onLogin: (mode: AppMode) => void
@@ -262,7 +262,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             >
               <div className="mb-6 text-center">
                 <h2 className="text-xl font-semibold text-slate-200">
-                  {selectedMode === 'CODE_GENERATOR' ? 'CodeStudio' : 'AutoTrap Studio'}
+                  {selectedMode === 'CODE_GENERATOR' ? 'CodeStudio' : 
+                   selectedMode === 'AUTO_TRAPPING' ? 'AutoTrap Studio' : 
+                   'Structural Studio'}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">Prihláste sa do aplikácie</p>
               </div>
@@ -483,6 +485,58 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             {/* Active indicator */}
             {selectedMode === 'AUTO_TRAPPING' && (
               <div className="absolute -bottom-1 left-1/2 h-1.5 w-24 -translate-x-1/2 rounded-full bg-gradient-to-r from-pink-400 to-purple-500" />
+            )}
+          </button>
+
+          {/* STRUCTURAL STUDIO Button */}
+          <button
+            type="button"
+            onClick={() => setSelectedMode('STRUCTURAL_STUDIO')}
+            className={`group relative overflow-hidden rounded-3xl border-3 px-14 py-10 transition-all duration-300 hover:-translate-y-3 hover:scale-105 ${
+              selectedMode === 'STRUCTURAL_STUDIO'
+                ? 'border-emerald-400 bg-gradient-to-br from-emerald-500/30 to-teal-600/30 shadow-2xl shadow-emerald-500/50'
+                : 'border-slate-600 bg-slate-800/60 hover:border-emerald-400/70 hover:shadow-xl hover:shadow-emerald-500/20'
+            }`}
+            style={{
+              transform: selectedMode === 'STRUCTURAL_STUDIO' ? 'scale(1.08) translateY(-8px)' : undefined,
+            }}
+          >
+            {/* Glow effect */}
+            <div className={`absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-emerald-500/20 to-teal-500/0 transition-opacity duration-300 ${
+              selectedMode === 'STRUCTURAL_STUDIO' ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'
+            }`} />
+            
+            {/* Icon - Box/Structure */}
+            <div className="relative mb-5 flex justify-center">
+              <svg
+                className={`h-24 w-24 transition-all duration-300 ${
+                  selectedMode === 'STRUCTURAL_STUDIO' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-300'
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            
+            {/* Text */}
+            <div className="relative text-center">
+              <h3 className={`text-2xl font-bold tracking-wide transition-colors duration-300 ${
+                selectedMode === 'STRUCTURAL_STUDIO' ? 'text-emerald-300' : 'text-slate-300 group-hover:text-emerald-200'
+              }`}>
+                STRUCTURAL
+              </h3>
+              <p className={`mt-3 text-base transition-colors duration-300 ${
+                selectedMode === 'STRUCTURAL_STUDIO' ? 'text-emerald-400/80' : 'text-slate-500 group-hover:text-slate-400'
+              }`}>
+                Die Line Studio
+              </p>
+            </div>
+            
+            {/* Active indicator */}
+            {selectedMode === 'STRUCTURAL_STUDIO' && (
+              <div className="absolute -bottom-1 left-1/2 h-1.5 w-24 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500" />
             )}
           </button>
         </div>
