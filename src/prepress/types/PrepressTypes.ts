@@ -530,7 +530,7 @@ export type SpotColorType =
   | 'TECHNICAL'     // Technical color (registration, etc.)
 
 export interface SpotColorLibraryMatch {
-  library: 'PANTONE' | 'HKS' | 'TOYO' | 'DIC' | 'CUSTOM'
+  library: 'PANTONE' | 'HKS' | 'TOYO' | 'DIC' | 'RAL' | 'CUSTOM'
   colorName: string
   colorCode?: string
   deltaE: number

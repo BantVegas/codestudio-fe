@@ -271,7 +271,7 @@ export class PDFImportEngine {
       modificationDate: info?.ModDate ? new Date(info.ModDate as string) : undefined,
       
       // PDF specifics
-      pdfVersion: metadata.info?.PDFFormatVersion as string || '1.4',
+      pdfVersion: (metadata.info as Record<string, unknown>)?.PDFFormatVersion as string || '1.4',
       pageCount: this.currentDocument.numPages,
       isLinearized: false, // Would need custom parsing
       isEncrypted: false,  // Would need custom parsing
@@ -493,8 +493,9 @@ export class PDFImportEngine {
         // Render page
         await pdfPage.render({
           canvasContext: context,
-          viewport: scaledViewport
-        }).promise
+          viewport: scaledViewport,
+          canvas: canvas
+        } as Parameters<typeof pdfPage.render>[0]).promise
         
         // Store thumbnail
         page.thumbnail = canvas.toDataURL('image/png')
@@ -594,8 +595,9 @@ export class PDFImportEngine {
     
     await pdfPage.render({
       canvasContext: context,
-      viewport
-    }).promise
+      viewport,
+      canvas
+    } as Parameters<typeof pdfPage.render>[0]).promise
   }
   
   /**
